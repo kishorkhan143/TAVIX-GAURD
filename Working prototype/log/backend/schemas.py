@@ -1,0 +1,224 @@
+"""
+AuthSentinel — Pydantic Schemas (API request / response shapes)
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Optional
+from pydantic import BaseModel, Field, field_serializer
+
+
+def _utc_timestamp(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    else:
+        value = value.astimezone(timezone.utc)
+    return value.isoformat().replace("+00:00", "Z")
+
+
+# ── Inbound from Collector ────────────────────────────────────────────────────
+
+class EventIngestionRequest(BaseModel):
+    """
+    Posted by the Windows Event Collector.
+    NEVER includes passwords — only security-event metadata.
+    """
+    event_id: int
+    timestamp: datetime
+    username: Optional[str] = None
+    source_ip: Optional[str] = None
+    source_host: Optional[str] = None
+    target_computer: Optional[str] = None
+    logon_type: Optional[int] = None
+    logon_type_description: Optional[str] = None
+    status: str                              # "SUCCESS" | "FAILURE"
+    raw_record_id: Optional[int] = None
+
+
+# ── Outbound to Dashboard ─────────────────────────────────────────────────────
+
+class EventResponse(BaseModel):
+    id: int
+    event_id: int
+    timestamp: datetime
+    username: Optional[str] = None
+    source_ip: Optional[str] = None
+    source_host: Optional[str] = None
+    target_computer: Optional[str] = None
+    logon_type: Optional[int] = None
+    logon_type_description: Optional[str] = None
+    status: str
+    risk_score: float
+    risk_level: str
+    detection_reason: Optional[str] = None
+    raw_record_id: Optional[int] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+    @field_serializer("timestamp", "created_at")
+    def serialize_timestamps(self, value: datetime) -> str:
+        return _utc_timestamp(value)
+
+
+class AlertResponse(BaseModel):
+    id: int
+    alert_type: str
+    username: Optional[str] = None
+    source_ip: Optional[str] = None
+    source_host: Optional[str] = None
+    target_computer: Optional[str] = None
+    risk_score: float
+    risk_level: str
+    failure_count: int
+    time_window_seconds: int
+    reason: Optional[str] = None
+    status: Optional[str] = "OPEN"
+    resolved: bool
+    triggered_at: datetime
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+    @field_serializer("triggered_at", "created_at")
+    def serialize_timestamps(self, value: datetime) -> str:
+        return _utc_timestamp(value)
+
+
+class StatsResponse(BaseModel):
+    total_events: int
+    successful_logins: int
+    failed_logins: int
+    active_alerts: int
+    critical_alerts: Optional[int] = 0
+    high_alerts: Optional[int] = 0
+    active_incidents: Optional[int] = 0
+    resolved_incidents: Optional[int] = 0
+
+
+class CollectorStatusRequest(BaseModel):
+    status: str          # "CONNECTED" | "DISCONNECTED" | "ONLINE" | "OFFLINE"
+    hostname: str
+    ip: Optional[str] = None
+    terminal_id: Optional[str] = None
+    computer_name: Optional[str] = None
+    mac_address: Optional[str] = None
+    os_name: Optional[str] = None
+    os_version: Optional[str] = None
+    logged_in_user: Optional[str] = None
+    cpu: Optional[str] = None
+    ram: Optional[str] = None
+    manufacturer: Optional[str] = None
+    model: Optional[str] = None
+    message: Optional[str] = None
+
+
+class HealthResponse(BaseModel):
+    status: str
+    backend: str
+    database: str
+    websocket_connections: int
+    collector_status: str
+    collector_hostname: Optional[str] = None
+    collector_ip: Optional[str] = None
+    uptime_seconds: float
+
+
+class LabCreateRequest(BaseModel):
+    id: Optional[str] = None
+    name: str
+    description: Optional[str] = None
+    location: Optional[str] = None
+
+
+class LabResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    location: Optional[str] = None
+    created_at: Optional[datetime] = None
+    terminals_count: Optional[int] = 0
+
+    model_config = {"from_attributes": True}
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: Optional[datetime]) -> Optional[str]:
+        return _utc_timestamp(value) if value else None
+
+
+class TerminalAssignRequest(BaseModel):
+    terminal_id: str
+    lab_id: Optional[str] = None
+
+
+class TerminalResponse(BaseModel):
+    terminal_id: str
+    account: Optional[str] = "—"
+    source_ip: Optional[str] = "—"
+    last_login: Optional[str] = "—"
+    last_login_raw: Optional[datetime] = None
+    status: Optional[str] = "UNKNOWN"
+    lab_id: Optional[str] = None
+    lab_name: Optional[str] = None
+
+
+class LastAuthEventSummary(BaseModel):
+    event_id: int
+    status: str
+    timestamp: datetime
+    username: Optional[str] = None
+    logon_type_description: Optional[str] = None
+    source_ip: Optional[str] = None
+    risk_level: Optional[str] = "LOW"
+
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, value: datetime) -> str:
+        return _utc_timestamp(value)
+
+
+class ComputerSummary(BaseModel):
+    terminal_id: str
+    computer_name: Optional[str] = None
+    hostname: Optional[str] = None
+    ip_address: Optional[str] = None
+    mac_address: Optional[str] = None
+    os_name: Optional[str] = None
+    os_version: Optional[str] = None
+    logged_in_user: Optional[str] = None
+    cpu: Optional[str] = None
+    ram: Optional[str] = None
+    manufacturer: Optional[str] = None
+    model: Optional[str] = None
+    status: str  # "Online" | "Offline" | "Unknown"
+    last_seen: Optional[datetime] = None
+    last_seen_formatted: Optional[str] = None
+    last_auth_event: Optional[LastAuthEventSummary] = None
+    incidents_count: int = 0
+    lab_id: Optional[str] = None
+    lab_name: Optional[str] = None
+
+    @field_serializer("last_seen")
+    def serialize_last_seen(self, value: Optional[datetime]) -> Optional[str]:
+        return _utc_timestamp(value) if value else None
+
+
+class LabComputersResponse(BaseModel):
+    lab_id: str
+    lab_name: str
+    description: Optional[str] = None
+    location: Optional[str] = None
+    total_computers: int
+    online_count: int
+    offline_count: int
+    unknown_count: int
+    computers: list[ComputerSummary]
+
+
+class ComputerDetailResponse(BaseModel):
+    computer: ComputerSummary
+    lab: Optional[LabResponse] = None
+    auth_events: list[EventResponse] = []
+    incidents: list[AlertResponse] = []
+
+

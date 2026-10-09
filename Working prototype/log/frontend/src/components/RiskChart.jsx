@@ -1,0 +1,137 @@
+/**
+ * RiskChart: Time-series visualization of risk score over time.
+ * Uses recharts for real-time updates.
+ */
+
+import React from 'react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ReferenceLine,
+  Area,
+  AreaChart,
+} from 'recharts';
+import { parseUtc } from '../useAuthSentinel';
+
+export default function RiskChart({ 
+  data = [],
+  height = 300,
+  showThresholds = true,
+  animated = true 
+}) {
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    const date = parseUtc(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  if (!data || data.length === 0) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: `${height}px`,
+        backgroundColor: '#f9fafb',
+        borderRadius: '0.5rem',
+        border: '1px solid #e5e7eb',
+        color: '#9ca3af'
+      }}>
+        No data available
+      </div>
+    );
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart 
+        data={data}
+        margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+      >
+        <defs>
+          <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+          </linearGradient>
+        </defs>
+
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        
+        <XAxis
+          dataKey="timestamp"
+          tickFormatter={formatTime}
+          tick={{ fontSize: 12 }}
+        />
+        
+        <YAxis
+          domain={[0, 100]}
+          tick={{ fontSize: 12 }}
+          label={{ value: 'Risk Score', angle: -90, position: 'insideLeft' }}
+        />
+        
+        <Tooltip
+          contentStyle={{
+            backgroundColor: '#fff',
+            border: '1px solid #e5e7eb',
+            borderRadius: '0.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}
+          formatter={(value) => {
+            if (typeof value === 'number') {
+              return [`${value.toFixed(1)}`, 'Score'];
+            }
+            return [value, 'Score'];
+          }}
+          labelFormatter={(label) => `Time: ${formatTime(label)}`}
+        />
+        
+        {showThresholds && (
+          <>
+            {/* Incident threshold (60) */}
+            <ReferenceLine
+              y={60}
+              stroke="#f59e0b"
+              strokeDasharray="5 5"
+              label={{ 
+                value: 'Incident (60)', 
+                position: 'right', 
+                fill: '#f59e0b', 
+                fontSize: 11 
+              }}
+            />
+            
+            {/* Cool threshold (30) */}
+            <ReferenceLine
+              y={30}
+              stroke="#10b981"
+              strokeDasharray="5 5"
+              label={{ 
+                value: 'Cool (30)', 
+                position: 'right', 
+                fill: '#10b981', 
+                fontSize: 11 
+              }}
+            />
+          </>
+        )}
+        
+        <Area
+          type="monotone"
+          dataKey="score"
+          stroke="#3b82f6"
+          fillOpacity={1}
+          fill="url(#colorScore)"
+          isAnimationActive={animated}
+          dot={false}
+          strokeWidth={2}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
