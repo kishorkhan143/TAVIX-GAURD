@@ -128,7 +128,7 @@ export default function LiveAlertsView({ alerts, onUpdateStatus }) {
                 </td>
               </tr>
             ) : (
-              filteredAlerts.map((al) => {
+              filteredAlerts.map((al, idx) => {
                 const alertId = al.id ? `ALT-${String(al.id).padStart(4, '0')}` : 'ALT-0001';
                 const status = (al.status || (al.resolved ? 'RESOLVED' : 'OPEN')).toUpperCase();
                 const riskLevel = (al.risk_level || 'HIGH').toUpperCase();
@@ -137,7 +137,13 @@ export default function LiveAlertsView({ alerts, onUpdateStatus }) {
                 const lastSeen = formatDateTime(al.triggered_at || al.created_at);
 
                 return (
-                  <tr key={al.id}>
+                  <tr
+                    key={al.id}
+                    style={{
+                      animation: 'iosFadeInUp var(--ios-duration-smooth) var(--ios-ease) both',
+                      animationDelay: `${Math.min(idx * 25, 250)}ms`,
+                    }}
+                  >
                     <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '12px' }}>
                       {alertId}
                     </td>

@@ -576,11 +576,12 @@ export default function LabComputersView({
       ) : (
         /* Compact Computer Rows for dense lab environments */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {filteredComputers.map((comp) => {
+          {filteredComputers.map((comp, idx) => {
             return (
               <div
                 key={comp.terminal_id}
                 onClick={() => onSelectComputer && onSelectComputer(comp)}
+                className="ios-press"
                 style={{
                   background: 'var(--bg-card)',
                   border: '1px solid var(--border-light)',
@@ -590,20 +591,22 @@ export default function LabComputersView({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '16px',
-                  boxShadow: 'var(--shadow-sm)',
+                  boxShadow: 'var(--ios-shadow-subtle, var(--shadow-sm))',
                   cursor: 'pointer',
-                  transition: 'all 0.15s ease',
+                  transition: 'transform var(--ios-duration-fast, 0.18s) var(--ios-ease), box-shadow var(--ios-duration-fast, 0.18s) var(--ios-ease), border-color var(--ios-duration-fast, 0.18s) var(--ios-ease)',
+                  animation: 'iosFadeInUp var(--ios-duration-normal, 0.26s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1)) both',
+                  animationDelay: `${Math.min(idx * 30, 300)}ms`,
                   flexWrap: 'wrap',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = 'var(--accent)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = 'var(--ios-shadow-card, 0 4px 12px rgba(0,0,0,0.06))';
+                  e.currentTarget.style.transform = 'translateX(4px)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = 'var(--border-light)';
-                  e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'var(--ios-shadow-subtle, var(--shadow-sm))';
+                  e.currentTarget.style.transform = 'translateX(0)';
                 }}
               >
                 {/* Computer Identifier & Online Status */}

@@ -99,25 +99,17 @@
   background: var(--bg-card, #ffffff);
   border: 1px solid var(--accent, #0066ff);
   border-top: none;
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
-  box-shadow: 0 8px 20px rgba(0, 102, 255, 0.15), 0 0 0 1px rgba(0, 102, 255, 0.1);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  box-shadow: 0 16px 36px -6px rgba(0, 102, 255, 0.16), 0 0 0 1px rgba(0, 102, 255, 0.08);
   z-index: 1000;
   max-height: 320px;
   overflow-y: auto;
   overflow-x: hidden;
-  animation: slideDown 0.15s ease;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  animation: iosDropdownEntrance var(--ios-duration-normal, 0.22s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1));
+  transform-origin: top center;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
 }
 
 .custom-select-header {

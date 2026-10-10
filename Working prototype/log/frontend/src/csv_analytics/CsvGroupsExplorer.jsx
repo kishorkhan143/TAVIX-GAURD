@@ -113,10 +113,16 @@ export default function CsvGroupsExplorer({ importId }) {
                 </td>
               </tr>
             ) : (
-              filteredGroups.map((grp) => {
+              filteredGroups.map((grp, idx) => {
                 const normalizedRisk = grp.risk_level === 'NORMAL' ? 'LOW' : (grp.risk_level || 'LOW');
                 return (
-                  <tr key={grp.group_name}>
+                  <tr
+                    key={grp.group_name}
+                    style={{
+                      animation: 'iosFadeInUp var(--ios-duration-smooth) var(--ios-ease) both',
+                      animationDelay: `${Math.min(idx * 25, 250)}ms`,
+                    }}
+                  >
                     <td style={{ fontWeight: 600, fontFamily: selectedDimension === 'ip' ? 'var(--font-mono)' : 'inherit' }}>
                       {grp.group_name}
                     </td>

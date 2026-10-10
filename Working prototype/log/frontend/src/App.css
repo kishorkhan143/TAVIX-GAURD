@@ -22,7 +22,7 @@
   flex-direction: column;
   border-radius: var(--radius-2xl);
   overflow-y: auto;
-  animation: slide-in-left 0.3s var(--transition-base);
+  /* Animation handled by motion/react */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(59, 130, 246, 0.04);
   flex-shrink: 0;
   height: 100%;
@@ -129,14 +129,18 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  transition: all var(--transition-base);
+  transition: all var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
   font-family: var(--font-sans);
 }
 
 .nav-item:hover {
   background: var(--bg-tertiary);
   color: var(--text-primary);
-  transform: translateX(2px);
+  transform: translateX(3px);
+}
+
+.nav-item:active {
+  transform: scale(0.975);
 }
 
 .nav-item.active {
@@ -153,15 +157,18 @@
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
-  transition: color var(--transition-base);
+  transition: transform var(--ios-duration-fast, 0.18s) var(--ios-spring, cubic-bezier(0.175, 0.885, 0.32, 1.15)),
+              color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .nav-item:hover .nav-icon {
   color: var(--text-primary);
+  transform: scale(1.06);
 }
 
 .nav-item.active .nav-icon {
   color: var(--accent);
+  transform: scale(1.12);
 }
 
 .nav-label {
@@ -211,7 +218,7 @@
   margin-left: 0;
   display: flex;
   flex-direction: column;
-  animation: fade-in 0.3s var(--transition-base);
+  /* Animation handled by motion/react */
   gap: 12px;
   height: 100%;
   overflow: visible;
@@ -227,7 +234,7 @@
   justify-content: space-between;
   position: relative;
   z-index: 50;
-  animation: slide-in-up 0.3s var(--transition-base);
+  /* Animation handled by motion/react */
   border-radius: var(--radius-2xl);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(59, 130, 246, 0.03);
   flex-shrink: 0;
@@ -408,7 +415,7 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   flex: 1;
   padding: 32px;
   overflow-y: auto;
-  animation: fade-in 0.4s var(--transition-base) 0.1s both;
+  /* Animation handled by motion/react */
   border-radius: var(--radius-2xl);
   background: #f5f5f7;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -418,7 +425,7 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
 
 /* ── Section ──────────────────────────────────────────────────────────────────– */
 .section {
-  animation: slide-in-up 0.3s var(--transition-base);
+  /* Animation handled by motion/react */
 }
 
 .section-header {
@@ -457,7 +464,7 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   font-weight: 500;
   color: var(--text-secondary);
   transition: all var(--transition-base);
-  animation: scale-in 0.3s var(--transition-base);
+  /* Animation handled by motion/react */
 }
 
 .status-badge:hover {
@@ -511,10 +518,13 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   background: var(--bg-secondary);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
-  transition: all var(--transition-base);
-  animation: scale-in 0.3s var(--transition-base);
+  transition: transform var(--ios-duration-normal, 0.26s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1)),
+              box-shadow var(--ios-duration-normal, 0.26s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              border-color var(--ios-duration-normal, 0.26s) var(--ios-ease),
+              background-color var(--ios-duration-normal, 0.26s) var(--ios-ease);
+  /* Animation handled by motion/react */
   cursor: default;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--ios-shadow-card);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -523,8 +533,8 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
 .stat-card:hover {
   border-color: var(--accent);
   background: var(--accent-faint);
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
+  transform: translateY(-4px) scale(1.008);
+  box-shadow: var(--ios-shadow-card-hover);
 }
 
 .stat-card.alert:hover {
@@ -586,7 +596,7 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   border-radius: var(--radius-xl);
   padding: 0;
   margin-bottom: 20px;
-  animation: scale-in 0.3s var(--transition-base) 0.1s both;
+  /* Animation handled by motion/react */
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
@@ -805,7 +815,7 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
   padding: 20px;
-  animation: scale-in 0.3s var(--transition-base) 0.1s both;
+  /* Animation handled by motion/react */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -822,7 +832,7 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
   padding: 0;
-  animation: scale-in 0.3s var(--transition-base) 0.1s both;
+  /* Animation handled by motion/react */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -841,7 +851,7 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   border-radius: var(--radius-xl);
   padding: 24px;
   margin-bottom: 24px;
-  animation: scale-in 0.3s var(--transition-base);
+  /* Animation handled by motion/react */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -950,3 +960,8 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
     gap: 8px;
   }
 }
+
+
+
+
+

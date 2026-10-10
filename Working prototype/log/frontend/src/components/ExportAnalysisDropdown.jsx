@@ -134,10 +134,13 @@ export default function ExportAnalysisDropdown({ alerts = [] }) {
             background: 'var(--bg-card, #ffffff)',
             border: '1px solid var(--border-light, #e5e7eb)',
             borderRadius: 'var(--radius-lg, 12px)',
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+            boxShadow: 'var(--ios-shadow-popover, 0 16px 36px -6px rgba(0, 0, 0, 0.15))',
             zIndex: 1000,
             padding: '6px',
-            animation: 'fadeIn 0.18s ease',
+            animation: 'iosDropdownEntrance var(--ios-duration-normal, 0.22s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1))',
+            transformOrigin: 'top right',
+            backdropFilter: 'blur(16px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(16px) saturate(180%)',
           }}
         >
           <div
@@ -308,12 +311,14 @@ export default function ExportAnalysisDropdown({ alerts = [] }) {
             background: statusType === 'error' ? '#fef2f2' : '#ecfdf5',
             color: statusType === 'error' ? '#b91c1c' : '#047857',
             border: `1px solid ${statusType === 'error' ? '#fecaca' : '#a7f3d0'}`,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+            boxShadow: 'var(--ios-shadow-card, 0 4px 16px -2px rgba(0, 0, 0, 0.08))',
             zIndex: 1001,
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            animation: 'fadeIn 0.2s ease',
+            animation: 'iosToastSlideIn var(--ios-duration-normal, 0.26s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1))',
+            transformOrigin: 'top right',
+            backdropFilter: 'blur(12px)',
           }}
         >
           <span>{statusType === 'error' ? '⚠️' : '✓'}</span>

@@ -164,7 +164,13 @@ export default function LiveGroupedDimensionsView({ events, alerts }) {
               </tr>
             ) : (
               groupedData.map((grp, index) => (
-                <tr key={`${grp.user}-${grp.sourceIp}-${index}`}>
+                <tr
+                  key={`${grp.user}-${grp.sourceIp}-${index}`}
+                  style={{
+                    animation: 'iosFadeInUp var(--ios-duration-smooth) var(--ios-ease) both',
+                    animationDelay: `${Math.min(index * 25, 250)}ms`,
+                  }}
+                >
                   <td style={{ fontWeight: 600 }}>{grp.user}</td>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{grp.sourceIp}</td>
                   <td>

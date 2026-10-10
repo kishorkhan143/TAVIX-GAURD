@@ -119,8 +119,14 @@ export default function CsvAlertsExplorer({ importId }) {
                 </td>
               </tr>
             ) : (
-              filteredAlerts.map((al) => (
-                <tr key={al.alert_id}>
+              filteredAlerts.map((al, idx) => (
+                <tr
+                  key={al.alert_id}
+                  style={{
+                    animation: 'iosFadeInUp var(--ios-duration-smooth) var(--ios-ease) both',
+                    animationDelay: `${Math.min(idx * 25, 250)}ms`,
+                  }}
+                >
                   <td style={{ fontWeight: 600 }}>{al.user || '—'}</td>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{al.ip || '—'}</td>
                   <td>

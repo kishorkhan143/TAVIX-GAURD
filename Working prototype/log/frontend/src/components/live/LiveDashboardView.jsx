@@ -107,7 +107,7 @@ export default function LiveDashboardView({ stats, events, alerts }) {
           gap: '14px',
         }}
       >
-        <div className="stat-card" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="stat-card ios-reveal is-visible ios-stagger-1" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
             Total Events
           </div>
@@ -119,7 +119,7 @@ export default function LiveDashboardView({ stats, events, alerts }) {
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="stat-card ios-reveal is-visible ios-stagger-2" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
             Security Alerts
           </div>
@@ -131,7 +131,7 @@ export default function LiveDashboardView({ stats, events, alerts }) {
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="stat-card ios-reveal is-visible ios-stagger-3" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase' }}>
             Critical Alerts
           </div>
@@ -143,7 +143,7 @@ export default function LiveDashboardView({ stats, events, alerts }) {
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="stat-card ios-reveal is-visible ios-stagger-4" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: '#f97316', textTransform: 'uppercase' }}>
             High Risk Alerts
           </div>
@@ -155,7 +155,7 @@ export default function LiveDashboardView({ stats, events, alerts }) {
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="stat-card ios-reveal is-visible ios-stagger-5" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
             Failed Auth
           </div>
@@ -167,7 +167,7 @@ export default function LiveDashboardView({ stats, events, alerts }) {
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="stat-card ios-reveal is-visible ios-stagger-6" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
             Successful Auth
           </div>
@@ -179,7 +179,7 @@ export default function LiveDashboardView({ stats, events, alerts }) {
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="stat-card ios-reveal is-visible ios-stagger-7" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
             Active Incidents
           </div>
@@ -191,7 +191,7 @@ export default function LiveDashboardView({ stats, events, alerts }) {
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="stat-card ios-reveal is-visible ios-stagger-8" style={{ padding: '16px 20px', borderRadius: 'var(--radius-xl)', background: 'var(--bg-card)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
             Resolved Incidents
           </div>

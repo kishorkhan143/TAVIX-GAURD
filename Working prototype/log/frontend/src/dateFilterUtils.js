@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
 import { parseUtc } from './useAuthSentinel';
 
 export const TIMEZONE = 'Asia/Kolkata';

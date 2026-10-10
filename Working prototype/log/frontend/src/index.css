@@ -1,3 +1,5 @@
+@import './styles/ios-motion.css';
+
 /* ═══════════════════════════════════════════════════════════════
    AuthSentinel — Light Mode Design System
    ═══════════════════════════════════════════════════════════════ */
@@ -47,9 +49,9 @@
   --radius-2xl: 24px;
 
   /* ── Animations ───────────────────────────────────────────────– */
-  --transition-fast:  0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base:  0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow:  0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast:  var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  --transition-base:  var(--ios-duration-normal, 0.26s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  --transition-slow:  var(--ios-duration-smooth, 0.34s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1));
 
   /* ── Shadows ──────────────────────────────────────────────────– */
   --shadow-sm:   0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -90,22 +92,5 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--border-normal); }
 
 /* ── Animations ───────────────────────────────────────────────────– */
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slide-in-left {
-  from { opacity: 0; transform: translateX(-12px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes slide-in-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes scale-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
+/* All animations are now handled by motion/react library */
+/* Removed CSS keyframes: fade-in, slide-in-left, slide-in-up, scale-in */

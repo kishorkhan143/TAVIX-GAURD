@@ -41,6 +41,7 @@ export default function Header({ health, wsStatus, onExport }) {
             }}
           >
             <span
+              className={isWsConnected ? "live-pulse-dot" : ""}
               style={{
                 width: '7px',
                 height: '7px',

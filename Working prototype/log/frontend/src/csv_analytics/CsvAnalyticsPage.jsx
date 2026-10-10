@@ -4,6 +4,7 @@ import { BACKEND_URL } from '../useAuthSentinel';
 import CsvAnalyticsCharts from './CsvAnalyticsCharts';
 import CsvGroupsExplorer from './CsvGroupsExplorer';
 import CsvAlertsExplorer from './CsvAlertsExplorer';
+import PageTransition from '../components/PageTransition';
 
 export default function CsvAnalyticsPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -161,46 +162,48 @@ export default function CsvAnalyticsPage() {
       </div>
 
       {/* Tab Contents */}
-      {activeTab === 'dashboard' && (
-        <>
-          {summaryData ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <CsvAnalyticsCharts summary={summaryData} />
-            </div>
-          ) : (
-            <div className="csv-empty-state-card">
-              <h3>No CSV Log File Analyzed Yet</h3>
-              <p>
-                Click the <strong>Upload New CSV</strong> button above to load and correlate security events.
-              </p>
-            </div>
-          )}
-        </>
-      )}
+      <PageTransition transitionKey={activeTab}>
+        {activeTab === 'dashboard' && (
+          <>
+            {summaryData ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <CsvAnalyticsCharts summary={summaryData} />
+              </div>
+            ) : (
+              <div className="csv-empty-state-card">
+                <h3>No CSV Log File Analyzed Yet</h3>
+                <p>
+                  Click the <strong>Upload New CSV</strong> button above to load and correlate security events.
+                </p>
+              </div>
+            )}
+          </>
+        )}
 
-      {activeTab === 'alerts' && (
-        <>
-          {summaryData ? (
-            <CsvAlertsExplorer importId={currentImportId} />
-          ) : (
-            <div className="csv-empty-state-card">
-              <p style={{ color: 'var(--text-tertiary)' }}>Please upload a CSV file to inspect alerts.</p>
-            </div>
-          )}
-        </>
-      )}
+        {activeTab === 'alerts' && (
+          <>
+            {summaryData ? (
+              <CsvAlertsExplorer importId={currentImportId} />
+            ) : (
+              <div className="csv-empty-state-card">
+                <p style={{ color: 'var(--text-tertiary)' }}>Please upload a CSV file to inspect alerts.</p>
+              </div>
+            )}
+          </>
+        )}
 
-      {activeTab === 'groups' && (
-        <>
-          {summaryData ? (
-            <CsvGroupsExplorer importId={currentImportId} />
-          ) : (
-            <div className="csv-empty-state-card">
-              <p style={{ color: 'var(--text-tertiary)' }}>Please upload a CSV file to inspect groups.</p>
-            </div>
-          )}
-        </>
-      )}
+        {activeTab === 'groups' && (
+          <>
+            {summaryData ? (
+              <CsvGroupsExplorer importId={currentImportId} />
+            ) : (
+              <div className="csv-empty-state-card">
+                <p style={{ color: 'var(--text-tertiary)' }}>Please upload a CSV file to inspect groups.</p>
+              </div>
+            )}
+          </>
+        )}
+      </PageTransition>
     </div>
   );
 }
