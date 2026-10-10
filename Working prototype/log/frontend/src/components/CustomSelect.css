@@ -38,7 +38,7 @@
   border: 1px solid var(--border-normal, #d1d5db);
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--transition-fast);
   font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   position: relative;
   z-index: 10;
@@ -82,7 +82,7 @@
 .custom-select-chevron {
   flex-shrink: 0;
   color: var(--text-secondary, #6b7280);
-  transition: transform 0.2s ease, color 0.15s ease;
+  transition: transform var(--transition-fast), color var(--transition-fast);
 }
 
 .custom-select-button:hover:not(:disabled) .custom-select-chevron {
@@ -158,7 +158,7 @@
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: all var(--transition-fast);
   border-radius: 6px;
   font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   position: relative;
@@ -186,7 +186,7 @@
   border-radius: 50%;
   background: var(--border-normal, #d1d5db);
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
 }
 
 .custom-select-option:hover .option-dot {
@@ -218,7 +218,7 @@
 .custom-select-menu::-webkit-scrollbar-thumb {
   background: var(--border-normal, #d1d5db);
   border-radius: 3px;
-  transition: background 0.2s ease;
+  transition: background var(--transition-fast);
 }
 
 .custom-select-menu::-webkit-scrollbar-thumb:hover {

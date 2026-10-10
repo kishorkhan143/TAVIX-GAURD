@@ -94,16 +94,7 @@ export default function LabComputersView({
             border: '1px solid #a7f3d0',
           }}
         >
-          <span
-            style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              background: '#10b981',
-              boxShadow: '0 0 6px #10b981',
-            }}
-          />
-          Online
+          ONLINE
         </span>
       );
     }
@@ -123,15 +114,7 @@ export default function LabComputersView({
             border: '1px solid #fecaca',
           }}
         >
-          <span
-            style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              background: '#ef4444',
-            }}
-          />
-          Offline
+          OFFLINE
         </span>
       );
     }
@@ -150,15 +133,7 @@ export default function LabComputersView({
           border: '1px solid #e5e7eb',
         }}
       >
-        <span
-          style={{
-            width: '7px',
-            height: '7px',
-            borderRadius: '50%',
-            background: '#9ca3af',
-          }}
-        />
-        Unknown
+        UNKNOWN
       </span>
     );
   };
@@ -415,19 +390,8 @@ export default function LabComputersView({
               background: statusFilter === 'Online' ? '#10b981' : 'var(--bg-primary)',
               color: statusFilter === 'Online' ? '#ffffff' : '#059669',
               transition: 'all 0.15s',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
             }}
           >
-            <span
-              style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: statusFilter === 'Online' ? '#ffffff' : '#10b981',
-              }}
-            />
             Online ({counts.online})
           </button>
 
@@ -445,19 +409,8 @@ export default function LabComputersView({
               background: statusFilter === 'Offline' ? '#ef4444' : 'var(--bg-primary)',
               color: statusFilter === 'Offline' ? '#ffffff' : '#dc2626',
               transition: 'all 0.15s',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
             }}
           >
-            <span
-              style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: statusFilter === 'Offline' ? '#ffffff' : '#ef4444',
-              }}
-            />
             Offline ({counts.offline})
           </button>
 
@@ -475,19 +428,8 @@ export default function LabComputersView({
               background: statusFilter === 'Unknown' ? '#6b7280' : 'var(--bg-primary)',
               color: statusFilter === 'Unknown' ? '#ffffff' : '#6b7280',
               transition: 'all 0.15s',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
             }}
           >
-            <span
-              style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: statusFilter === 'Unknown' ? '#ffffff' : '#9ca3af',
-              }}
-            />
             Unknown ({counts.unknown})
           </button>
         </div>
@@ -511,7 +453,7 @@ export default function LabComputersView({
               border: '3px solid var(--border-normal)',
               borderTopColor: 'var(--accent)',
               borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite',
+              animation: 'spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite',
               margin: '0 auto 12px auto',
             }}
           />
