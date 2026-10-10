@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BACKEND_URL } from '../useAuthSentinel';
+import CustomSelect from '../components/CustomSelect';
 import CsvAlertDetailsModal from './CsvAlertDetailsModal';
 
 export default function CsvAlertsExplorer({ importId }) {
@@ -57,41 +58,33 @@ export default function CsvAlertsExplorer({ importId }) {
       <div className="grouping-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           {/* Severity Filter Dropdown Form */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label htmlFor="csv-severity-select" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              Severity:
-            </label>
-            <select
-              id="csv-severity-select"
-              className="dimension-select"
-              value={severityFilter}
-              onChange={(e) => setSeverityFilter(e.target.value)}
-            >
-              <option value="ALL">ALL</option>
-              <option value="CRITICAL">CRITICAL</option>
-              <option value="HIGH">HIGH</option>
-              <option value="MEDIUM">MEDIUM</option>
-              <option value="LOW">LOW</option>
-            </select>
-          </div>
+          <CustomSelect
+            label="Severity:"
+            value={severityFilter}
+            onChange={(e) => setSeverityFilter(e.target.value)}
+            options={[
+              { value: 'ALL', label: 'ALL' },
+              { value: 'CRITICAL', label: 'CRITICAL' },
+              { value: 'HIGH', label: 'HIGH' },
+              { value: 'MEDIUM', label: 'MEDIUM' },
+              { value: 'LOW', label: 'LOW' },
+            ]}
+            style={{ minWidth: '120px' }}
+          />
 
           {/* Status Filter Dropdown Form */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label htmlFor="csv-status-select" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              Status:
-            </label>
-            <select
-              id="csv-status-select"
-              className="dimension-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="ALL">ALL</option>
-              <option value="OPEN">OPEN</option>
-              <option value="INVESTIGATING">INVESTIGATING</option>
-              <option value="RESOLVED">RESOLVED</option>
-            </select>
-          </div>
+          <CustomSelect
+            label="Status:"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            options={[
+              { value: 'ALL', label: 'ALL' },
+              { value: 'OPEN', label: 'OPEN' },
+              { value: 'INVESTIGATING', label: 'INVESTIGATING' },
+              { value: 'RESOLVED', label: 'RESOLVED' },
+            ]}
+            style={{ minWidth: '140px' }}
+          />
         </div>
 
         <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>

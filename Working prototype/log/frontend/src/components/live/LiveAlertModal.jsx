@@ -138,22 +138,6 @@ export default function LiveAlertModal({ alert, onClose, onUpdateStatus }) {
           </div>
 
           <div className="alert-modal-actions">
-            <button
-              type="button"
-              className="btn-investigate"
-              disabled={isUpdating}
-              onClick={() => handleStatusChange('INVESTIGATING')}
-            >
-              Investigate
-            </button>
-            <button
-              type="button"
-              className="btn-resolve"
-              disabled={isUpdating}
-              onClick={() => handleStatusChange('RESOLVED')}
-            >
-              Resolve
-            </button>
           </div>
         </div>
       </div>

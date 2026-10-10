@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BACKEND_URL } from '../useAuthSentinel';
+import CustomSelect from '../components/CustomSelect';
 import CsvGroupDetailsModal from './CsvGroupDetailsModal';
 
 const DIMENSIONS = [
@@ -7,7 +8,6 @@ const DIMENSIONS = [
   { id: 'ip', label: 'IP Address' },
   { id: 'event_type', label: 'Event Type' },
   { id: 'status', label: 'Status' },
-  { id: 'country', label: 'Country' },
   { id: 'date', label: 'Date' },
   { id: 'hour', label: 'Hour' },
   { id: 'severity', label: 'Severity' },
@@ -51,20 +51,16 @@ export default function CsvGroupsExplorer({ importId }) {
       {/* Control Toolbar */}
       <div className="grouping-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-            Group By:
-          </span>
-          <select
-            className="dimension-select"
+          <CustomSelect
+            label="Group By:"
             value={selectedDimension}
             onChange={(e) => setSelectedDimension(e.target.value)}
-          >
-            {DIMENSIONS.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.label}
-              </option>
-            ))}
-          </select>
+            options={DIMENSIONS.map((d) => ({
+              value: d.id,
+              label: d.label,
+            }))}
+            style={{ minWidth: '140px' }}
+          />
 
           <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
             ({groups.length} distinct groups detected)

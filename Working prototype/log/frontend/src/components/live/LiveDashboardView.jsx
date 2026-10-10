@@ -211,7 +211,6 @@ export default function LiveDashboardView({ stats, events, alerts }) {
           <div className="chart-header">
             <div>
               <div className="chart-title">Events Over Time</div>
-              <div className="chart-subtitle">Chronological authentication telemetry stream</div>
             </div>
           </div>
           <div className="chart-body">

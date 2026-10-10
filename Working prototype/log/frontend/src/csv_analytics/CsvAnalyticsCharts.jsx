@@ -55,7 +55,6 @@ export default function CsvAnalyticsCharts({ summary }) {
           <div className="chart-header">
             <div>
               <div className="chart-title">Successful vs. Failed Events</div>
-              <div className="chart-subtitle">Authentication outcome breakdown from CSV logs</div>
             </div>
           </div>
           <div
@@ -106,7 +105,6 @@ export default function CsvAnalyticsCharts({ summary }) {
           <div className="chart-header">
             <div>
               <div className="chart-title">Risk Level Distribution</div>
-              <div className="chart-subtitle">Event counts across security risk bands</div>
             </div>
           </div>
           <div className="chart-body">
@@ -131,7 +129,6 @@ export default function CsvAnalyticsCharts({ summary }) {
         <div className="chart-header">
           <div>
             <div className="chart-title">Events Over Time</div>
-            <div className="chart-subtitle">Chronological authentication activity and anomaly trends</div>
           </div>
         </div>
         <div className="chart-body" style={{ height: '260px' }}>

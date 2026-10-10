@@ -134,10 +134,6 @@ export default function CsvAlertDetailsModal({ alert, onClose, onStatusUpdated }
       ),
     },
     {
-      label: 'Country',
-      value: alert.country || 'Unspecified',
-    },
-    {
       label: 'First seen',
       value: fmtTime(alert.first_seen),
     },
@@ -220,22 +216,6 @@ export default function CsvAlertDetailsModal({ alert, onClose, onStatusUpdated }
           </div>
 
           <div className="alert-modal-actions">
-            <button
-              type="button"
-              className="btn-investigate"
-              disabled={isUpdating}
-              onClick={() => handleUpdateStatus('INVESTIGATING')}
-            >
-              Investigate
-            </button>
-            <button
-              type="button"
-              className="btn-resolve"
-              disabled={isUpdating}
-              onClick={() => handleUpdateStatus('RESOLVED')}
-            >
-              Resolve
-            </button>
           </div>
         </div>
       </div>

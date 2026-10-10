@@ -13,9 +13,6 @@ export default function LaboratoriesView({ labs = [], onAddLab, onDeleteLab, onS
           <h2 style={{ fontSize: '22px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--text-primary)' }}>
             Laboratories
           </h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: 0 }}>
-            Configure test environments and assigned computer terminals • Click any lab to view connected computers
-          </p>
         </div>
 
         <button

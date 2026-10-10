@@ -148,7 +148,10 @@ function Sidebar({ activeMenu, onMenuChange }) {
           <img src={tavixLogo} alt="TAVIX GUARD" className="logo-img" />
         </div>
         <div className="logo-text">
-          <div className="logo-title">TAVIX GUARD</div>
+          <div className="logo-title">
+            <span className="tavix-text">TAVIX </span>
+            <span className="guard-text">GUARD</span>
+          </div>
         </div>
       </div>
 
@@ -240,11 +243,9 @@ function OverviewSection({ events, alerts }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h2>System Status</h2>
-            <p>{isToday ? 'Real-time monitoring overview' : `Monitoring overview for ${displayDate}`}</p>
           </div>
           {!isToday && (
             <div className="viewing-past-date-pill">
-              <span className="paused-dot" />
               <span>Viewing {displayDate}</span>
               <button type="button" className="btn-back-to-live" onClick={resetToToday}>
                 Back to live
@@ -338,12 +339,10 @@ function LiveTelemetrySection({ events, alerts }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h2>Incidents</h2>
-            <p>{isToday ? 'Real-time security incidents and authentication activity' : `Historical security incidents and authentication activity for ${displayDate}`}</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             {!isToday && (
               <div className="viewing-past-date-pill">
-                <span className="paused-dot" />
                 <span>Viewing {displayDate}</span>
                 <button type="button" className="btn-back-to-live" onClick={resetToToday}>
                   Back to live
@@ -390,7 +389,6 @@ function SettingsSection({ health }) {
 
       <div className="settings-card">
         <h3>System Status</h3>
-        <p className="settings-subtitle">Monitor backend services and database connections</p>
         
         <div className="status-grid settings-status">
           <StatusBadge label="Backend" online={isBackendOnline} />

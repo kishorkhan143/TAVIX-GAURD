@@ -10,9 +10,6 @@ export default function LabTerminalsView({ terminals, labs, onAssign }) {
         <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
           Lab Terminals
         </h3>
-        <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '4px 0 0 0' }}>
-          Real-time terminal inventory derived from actual live authentication telemetry
-        </p>
       </div>
 
       <div className="data-table-container">
