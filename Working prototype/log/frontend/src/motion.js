@@ -257,13 +257,19 @@ export const variants = {
 /**
  * useMotionPrefs hook: Detect prefers-reduced-motion and return appropriate config.
  * If motion is reduced, return simple 150ms fade instead of springs.
+ * 
+ * Avoids linter warning: Initializes state from media query check before effect
+ * to prevent synchronous setState in effect.
  */
 export function useMotionPrefs() {
-  const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(() => {
+    // Initialize from media query on mount
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
 
   React.useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(mediaQuery.matches);
 
     const handleChange = (e) => {
       setPrefersReducedMotion(e.matches);
