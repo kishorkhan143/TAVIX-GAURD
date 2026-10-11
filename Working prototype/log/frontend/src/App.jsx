@@ -27,13 +27,25 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
       <Routes>
+        {/* Redirect root to login if not authenticated */}
+        <Route
+          path="/"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
         {/* Public Auth Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage onVerified={handleVerified} />} />
 
         {/* Protected Dashboard Routes */}
         <Route
-          path="/*"
+          path="/dashboard/*"
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
               <DateProvider>
@@ -43,8 +55,8 @@ export default function App() {
           }
         />
 
-        {/* Catch-all redirect */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* Catch-all - redirect unknown routes to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </MotionConfig>
   );
