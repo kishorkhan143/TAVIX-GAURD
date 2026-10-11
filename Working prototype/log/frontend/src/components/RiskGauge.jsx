@@ -4,6 +4,8 @@
  */
 
 import React from 'react';
+import { motion, useMotionValue, animate } from 'motion/react';
+import { springs, calculateDashOffset } from '../motion';
 import './RiskGauge.css';
 
 export default function RiskGauge({ 
@@ -36,20 +38,41 @@ export default function RiskGauge({
   const percentage = Math.min(100, Math.max(0, score));
   // Circumference of circle with radius 45
   const circumference = 2 * Math.PI * 45;
-  const dashOffset = circumference - (percentage / 100) * circumference;
+  
+  // Motion values for animation
+  const dashOffsetMV = useMotionValue(calculateDashOffset(score, circumference));
+  const [displayScore, setDisplayScore] = React.useState(Math.round(score));
+  const prevScoreRef = React.useRef(score);
+
+  React.useEffect(() => {
+    const from = prevScoreRef.current;
+    const to = score;
+    prevScoreRef.current = to;
+    
+    // Animate arc
+    animate(dashOffsetMV, calculateDashOffset(to, circumference), springs.soft);
+    
+    // Animate displayed number
+    animate(from, to, {
+      ...springs.soft,
+      onUpdate: (v) => setDisplayScore(Math.round(v)),
+    });
+  }, [score, circumference, dashOffsetMV]);
 
   return (
-    <div 
+    <motion.div 
       className={`risk-gauge risk-gauge-${size}`}
       onClick={onClick}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
+      whileHover={{ y: -2 }}
+      transition={springs.soft}
     >
       <svg viewBox="0 0 100 100" className="gauge-svg">
         {/* Background circle */}
         <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" strokeWidth="2" />
         
         {/* Colored progress arc */}
-        <circle
+        <motion.circle
           cx="50"
           cy="50"
           r="45"
@@ -57,10 +80,11 @@ export default function RiskGauge({
           stroke={color}
           strokeWidth="4"
           strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
+          strokeDashoffset={dashOffsetMV}
           strokeLinecap="round"
           transform="rotate(-90 50 50)"
-          style={{ transition: 'stroke-dashoffset 0.3s ease' }}
+          animate={{ stroke: color }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         />
         
         {/* Center score text */}
@@ -71,7 +95,7 @@ export default function RiskGauge({
           className="gauge-text"
           style={{ fill: color }}
         >
-          {Math.round(score)}
+          {displayScore}
         </text>
         
         {/* Band label in center */}
@@ -91,6 +115,6 @@ export default function RiskGauge({
           {band}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

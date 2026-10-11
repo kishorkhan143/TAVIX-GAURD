@@ -144,6 +144,8 @@ const MENU_ITEMS = [
 // ── Components ────────────────────────────────────────────────────────────────
 
 function Sidebar({ activeMenu, onMenuChange }) {
+  const motionPrefs = useMotionPrefs();
+  
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -162,31 +164,53 @@ function Sidebar({ activeMenu, onMenuChange }) {
         {MENU_ITEMS.map((section) => (
           <div key={section.category} className="nav-section">
             <div className="nav-section-title">{section.category}</div>
-            <div className="nav-items">
+            <motion.div 
+              className="nav-items"
+              variants={motionPrefs.navItemContainer}
+              initial="hidden"
+              animate="visible"
+            >
               {section.items.map((item) => (
-                <button
+                <motion.button
                   key={item.id}
                   className={`nav-item ${activeMenu === item.id ? 'active' : ''}`}
                   onClick={() => onMenuChange(item.id)}
+                  whileHover={{ x: 2 }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={springs.snappy}
+                  variants={motionPrefs.navItem}
+                  style={{ position: 'relative' }}
                 >
+                  {activeMenu === item.id && (
+                    <motion.div
+                      layoutId="nav-active"
+                      className="nav-active-pill"
+                      transition={springs.snappy}
+                    />
+                  )}
                   <span className="nav-icon">
                     <Icon name={item.icon} size={18} />
                   </span>
                   <span className="nav-label">{item.label}</span>
-                </button>
+                </motion.button>
               ))}
-            </div>
+            </motion.div>
           </div>
         ))}
       </nav>
 
       <div className="sidebar-footer">
-        <button className="admin-btn">
+        <motion.button 
+          className="admin-btn"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.96 }}
+          transition={springs.snappy}
+        >
           <span className="admin-icon">
             <Icon name="user" size={16} />
           </span>
           <span>Admin Account</span>
-        </button>
+        </motion.button>
       </div>
     </aside>
   );
@@ -203,11 +227,23 @@ function Header({ currentMenuLabel, currentCategory }) {
   return (
     <header className="header">
       <div className="header-left">
-        <div className="header-category">{currentCategory}</div>
+        <div className="header-category">
+          <motion.span 
+            key={currentCategory}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={springs.snappy}
+          >
+            {currentCategory}
+          </motion.span>
+        </div>
       </div>
       <div className="header-right">
         <DateFilter />
-        <div className="clock">
+        <div 
+          className="clock"
+          style={{ fontVariantNumeric: 'tabular-nums' }}
+        >
           {time.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Asia/Kolkata' })}
         </div>
       </div>
@@ -217,11 +253,23 @@ function Header({ currentMenuLabel, currentCategory }) {
 
 function StatusBadge({ label, online, count }) {
   return (
-    <div className={`status-badge ${online ? 'online' : 'offline'}`}>
-      <span className="dot" />
+    <motion.div 
+      className={`status-badge ${online ? 'online' : 'offline'}`}
+      key={online ? 'online' : 'offline'}
+      animate={{ opacity: 1 }}
+    >
+      {online ? (
+        <motion.span 
+          className="dot"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
+          transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+        />
+      ) : (
+        <span className="dot" />
+      )}
       <span>{label}</span>
       {count !== undefined && <span className="count">{count}</span>}
-    </div>
+    </motion.div>
   );
 }
 

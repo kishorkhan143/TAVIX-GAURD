@@ -1,4 +1,6 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { variants, springs } from '../motion';
 
 /**
  * PageTransition — Premium iOS-inspired View Container
@@ -7,15 +9,18 @@ import React from 'react';
  */
 export default function PageTransition({ children, transitionKey, className = '' }) {
   return (
-    <div
-      key={transitionKey}
-      className={`ios-page-container ${className}`}
-      style={{
-        width: '100%',
-        minHeight: '100%',
-      }}
-    >
-      {children}
-    </div>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={transitionKey}
+        className={`ios-page-container ${className}`}
+        style={{width: '100%', minHeight: '100%'}}
+        variants={variants.pageTransition}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
   );
 }
