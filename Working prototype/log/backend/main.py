@@ -67,6 +67,8 @@ from schemas import (
 from ws_manager import manager
 from csv_analytics import csv_router
 import api_risk
+from auth_router import router as auth_router
+import auth_service
 
 # ── Logging ─────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -159,6 +161,7 @@ async def _collector_watchdog() -> None:
 async def lifespan(app: FastAPI):
     # init_db is not async, call it directly
     init_db()
+    auth_service.init_auth_service()
     watchdog = asyncio.create_task(_collector_watchdog())
     logger.info("AuthSentinel backend started on %s:%d", settings.host, settings.port)
     try:
@@ -190,6 +193,7 @@ app.add_middleware(
 
 app.include_router(csv_router)
 app.include_router(api_risk.router)
+app.include_router(auth_router)
 
 
 # ── Auth helper ───────────────────────────────────────────────────────────────

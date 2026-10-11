@@ -7,3 +7,6 @@ pydantic==2.14.0b2
 pydantic-settings==2.9.0
 python-multipart==0.0.18
 python-dateutil==2.9.0.post0
+resend==1.4.0
+PyJWT==2.8.1
+email-validator==2.1.0

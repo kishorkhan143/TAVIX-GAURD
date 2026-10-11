@@ -222,3 +222,38 @@ class ComputerDetailResponse(BaseModel):
     incidents: list[AlertResponse] = []
 
 
+
+# ── Authentication Schemas ───────────────────────────────────────────────────
+
+class VerificationRequestRequest(BaseModel):
+    """Request to send verification email."""
+    email: str
+
+
+class VerificationRequestResponse(BaseModel):
+    """Response after verification email is sent."""
+    success: bool
+    message: str
+
+
+class VerifyEmailResponse(BaseModel):
+    """Response after email is verified and JWT issued."""
+    success: bool
+    message: str
+    jwt_token: str
+    user: Optional[dict] = None
+
+
+class UserResponse(BaseModel):
+    """Current authenticated user info."""
+    id: int
+    email: str
+    is_verified: bool
+    created_at: datetime
+    verified_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+    @field_serializer("created_at", "verified_at")
+    def serialize_timestamps(self, value: Optional[datetime]) -> Optional[str]:
+        return _utc_timestamp(value) if value else None

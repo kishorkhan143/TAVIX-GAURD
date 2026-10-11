@@ -148,6 +148,33 @@ class Computer(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
     )
+
+
+class User(Base):
+    """
+    Authenticated users for TAVIX GUARD dashboard access.
+    Email-based authentication with verification tokens and JWT tokens.
+    """
+
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(256), nullable=False, unique=True, index=True)
+    is_verified = Column(Boolean, default=False)
+    verification_token = Column(String(512), nullable=True)
+    verification_token_expires_at = Column(DateTime(timezone=True), nullable=True)
+    jwt_secret = Column(String(512), nullable=True)  # Secret key for JWT signing
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("ix_users_email", "email"),
+        Index("ix_users_verification_token", "verification_token"),
+    )
     updated_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
