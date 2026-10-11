@@ -3,6 +3,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { variants, springs } from '../motion';
 import RiskGauge from '../components/RiskGauge';
 import RiskChart from '../components/RiskChart';
 import { BACKEND_URL, parseUtc } from '../useAuthSentinel';
@@ -53,30 +55,51 @@ export default function EntityDetail({ entityType, entityId }) {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.15 }}
+        style={{ padding: '2rem', textAlign: 'center' }}
+      >
         <p>Loading...</p>
-      </div>
+      </motion.div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '2rem', color: '#ef4444' }}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.15 }}
+        style={{ padding: '2rem', color: '#ef4444' }}
+      >
         <p>Error: {error}</p>
-      </div>
+      </motion.div>
     );
   }
 
   if (!entity) {
     return (
-      <div style={{ padding: '2rem' }}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.15 }}
+        style={{ padding: '2rem' }}
+      >
         <p>Entity not found</p>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <motion.div
+      variants={variants.slideInRight}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      style={{ padding: '2rem' }}
+    >
       <h1>{entityType}: {entityId}</h1>
       
       <div style={{ display: 'flex', gap: '2rem', marginTop: '2rem' }}>
@@ -123,13 +146,18 @@ export default function EntityDetail({ entityType, entityId }) {
       {entity.active_signals && entity.active_signals.length > 0 && (
         <div style={{ marginTop: '2rem' }}>
           <h3>Active Signals</h3>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: '1rem'
-          }}>
+          <motion.div 
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '1rem'
+            }}
+            variants={variants.listContainer}
+            initial="hidden"
+            animate="visible"
+          >
             {entity.active_signals.map((signal, idx) => (
-              <div 
+              <motion.div 
                 key={idx}
                 style={{
                   padding: '1rem',
@@ -137,14 +165,17 @@ export default function EntityDetail({ entityType, entityId }) {
                   borderRadius: '0.5rem',
                   border: '1px solid #e5e7eb'
                 }}
+                variants={variants.listItem}
+                whileHover={{ y: -2 }}
+                transition={springs.soft}
               >
                 <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Signal</p>
                 <p style={{ margin: 0, fontWeight: '600' }}>{signal}</p>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

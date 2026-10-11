@@ -94,16 +94,7 @@ export default function LabComputersView({
             border: '1px solid #a7f3d0',
           }}
         >
-          <span
-            style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              background: '#10b981',
-              boxShadow: '0 0 6px #10b981',
-            }}
-          />
-          Online
+          ONLINE
         </span>
       );
     }
@@ -123,15 +114,7 @@ export default function LabComputersView({
             border: '1px solid #fecaca',
           }}
         >
-          <span
-            style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              background: '#ef4444',
-            }}
-          />
-          Offline
+          OFFLINE
         </span>
       );
     }
@@ -150,15 +133,7 @@ export default function LabComputersView({
           border: '1px solid #e5e7eb',
         }}
       >
-        <span
-          style={{
-            width: '7px',
-            height: '7px',
-            borderRadius: '50%',
-            background: '#9ca3af',
-          }}
-        />
-        Unknown
+        UNKNOWN
       </span>
     );
   };
@@ -415,19 +390,8 @@ export default function LabComputersView({
               background: statusFilter === 'Online' ? '#10b981' : 'var(--bg-primary)',
               color: statusFilter === 'Online' ? '#ffffff' : '#059669',
               transition: 'all 0.15s',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
             }}
           >
-            <span
-              style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: statusFilter === 'Online' ? '#ffffff' : '#10b981',
-              }}
-            />
             Online ({counts.online})
           </button>
 
@@ -445,19 +409,8 @@ export default function LabComputersView({
               background: statusFilter === 'Offline' ? '#ef4444' : 'var(--bg-primary)',
               color: statusFilter === 'Offline' ? '#ffffff' : '#dc2626',
               transition: 'all 0.15s',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
             }}
           >
-            <span
-              style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: statusFilter === 'Offline' ? '#ffffff' : '#ef4444',
-              }}
-            />
             Offline ({counts.offline})
           </button>
 
@@ -475,19 +428,8 @@ export default function LabComputersView({
               background: statusFilter === 'Unknown' ? '#6b7280' : 'var(--bg-primary)',
               color: statusFilter === 'Unknown' ? '#ffffff' : '#6b7280',
               transition: 'all 0.15s',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
             }}
           >
-            <span
-              style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: statusFilter === 'Unknown' ? '#ffffff' : '#9ca3af',
-              }}
-            />
             Unknown ({counts.unknown})
           </button>
         </div>
@@ -511,7 +453,7 @@ export default function LabComputersView({
               border: '3px solid var(--border-normal)',
               borderTopColor: 'var(--accent)',
               borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite',
+              animation: 'spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite',
               margin: '0 auto 12px auto',
             }}
           />
@@ -634,11 +576,12 @@ export default function LabComputersView({
       ) : (
         /* Compact Computer Rows for dense lab environments */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {filteredComputers.map((comp) => {
+          {filteredComputers.map((comp, idx) => {
             return (
               <div
                 key={comp.terminal_id}
                 onClick={() => onSelectComputer && onSelectComputer(comp)}
+                className="ios-press"
                 style={{
                   background: 'var(--bg-card)',
                   border: '1px solid var(--border-light)',
@@ -648,20 +591,22 @@ export default function LabComputersView({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '16px',
-                  boxShadow: 'var(--shadow-sm)',
+                  boxShadow: 'var(--ios-shadow-subtle, var(--shadow-sm))',
                   cursor: 'pointer',
-                  transition: 'all 0.15s ease',
+                  transition: 'transform var(--ios-duration-fast, 0.18s) var(--ios-ease), box-shadow var(--ios-duration-fast, 0.18s) var(--ios-ease), border-color var(--ios-duration-fast, 0.18s) var(--ios-ease)',
+                  animation: 'iosFadeInUp var(--ios-duration-normal, 0.26s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1)) both',
+                  animationDelay: `${Math.min(idx * 30, 300)}ms`,
                   flexWrap: 'wrap',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = 'var(--accent)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = 'var(--ios-shadow-card, 0 4px 12px rgba(0,0,0,0.06))';
+                  e.currentTarget.style.transform = 'translateX(4px)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = 'var(--border-light)';
-                  e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'var(--ios-shadow-subtle, var(--shadow-sm))';
+                  e.currentTarget.style.transform = 'translateX(0)';
                 }}
               >
                 {/* Computer Identifier & Online Status */}

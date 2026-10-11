@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CustomSelect from '../CustomSelect';
 
 export default function AssignLabModal({ terminal, labs, onClose, onAssign }) {
   const [selectedLabId, setSelectedLabId] = useState(terminal?.lab_id || (labs.length > 0 ? labs[0].id : ''));
@@ -17,6 +18,11 @@ export default function AssignLabModal({ terminal, labs, onClose, onAssign }) {
       setIsSubmitting(false);
     }
   };
+
+  const labOptions = labs.map((lab) => ({
+    value: lab.id,
+    label: `${lab.name} (${lab.id})`,
+  }));
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -47,31 +53,13 @@ export default function AssignLabModal({ terminal, labs, onClose, onAssign }) {
                 No laboratories exist yet. Please create a laboratory first in the <strong>Laboratories</strong> tab.
               </div>
             ) : (
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  Select Target Laboratory:
-                </label>
-                <select
-                  value={selectedLabId}
-                  onChange={(e) => setSelectedLabId(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-normal)',
-                    background: 'var(--bg-card)',
-                    color: 'var(--text-primary)',
-                    fontSize: '13px',
-                    outline: 'none',
-                  }}
-                >
-                  {labs.map((lab) => (
-                    <option key={lab.id} value={lab.id}>
-                      {lab.name} ({lab.id})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CustomSelect
+                label="Select Target Laboratory:"
+                value={selectedLabId}
+                onChange={(e) => setSelectedLabId(e.target.value)}
+                options={labOptions}
+                placeholder="Choose a laboratory..."
+              />
             )}
           </div>
 

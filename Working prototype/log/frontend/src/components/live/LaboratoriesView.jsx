@@ -13,9 +13,6 @@ export default function LaboratoriesView({ labs = [], onAddLab, onDeleteLab, onS
           <h2 style={{ fontSize: '22px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--text-primary)' }}>
             Laboratories
           </h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: 0 }}>
-            Configure test environments and assigned computer terminals • Click any lab to view connected computers
-          </p>
         </div>
 
         <button
@@ -95,11 +92,12 @@ export default function LaboratoriesView({ labs = [], onAddLab, onDeleteLab, onS
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-          {labs.map((lab) => (
+          {labs.map((lab, idx) => (
             <div
               key={lab.id}
               id={`lab-card-${lab.id}`}
               onClick={() => onSelectLab && onSelectLab(lab)}
+              className="stat-card"
               style={{
                 background: 'var(--bg-card)',
                 border: '1px solid var(--border-light)',
@@ -108,19 +106,21 @@ export default function LaboratoriesView({ labs = [], onAddLab, onDeleteLab, onS
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                boxShadow: 'var(--shadow-sm)',
+                boxShadow: 'var(--ios-shadow-subtle, var(--shadow-sm))',
                 cursor: 'pointer',
-                transition: 'all 0.2s ease',
+                transition: 'transform var(--ios-duration-normal, 0.26s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1)), box-shadow var(--ios-duration-normal, 0.26s) var(--ios-ease), border-color var(--ios-duration-normal, 0.26s) var(--ios-ease)',
+                animation: 'iosFadeInUp var(--ios-duration-smooth, 0.34s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1)) both',
+                animationDelay: `${idx * 45}ms`,
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = 'var(--accent)';
-                e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = 'var(--ios-shadow-card-hover)';
+                e.currentTarget.style.transform = 'translateY(-4px) scale(1.008)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = 'var(--border-light)';
-                e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'var(--ios-shadow-subtle, var(--shadow-sm))';
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
               }}
             >
               <div>

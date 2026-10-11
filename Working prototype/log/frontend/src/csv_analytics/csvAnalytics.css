@@ -126,12 +126,16 @@
   color: var(--text-secondary);
   cursor: pointer;
   white-space: nowrap;
-  transition: all var(--transition-fast);
+  transition: all var(--ios-duration-fast) var(--ios-ease);
 }
 
 .csv-tab-btn:hover {
   color: var(--text-primary);
   background: var(--bg-secondary);
+}
+
+.csv-tab-btn:active {
+  transform: scale(0.975);
 }
 
 .csv-tab-btn.active {
@@ -205,6 +209,14 @@
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
+  transition: transform var(--ios-duration-normal) var(--ios-spring-soft),
+              box-shadow var(--ios-duration-normal) var(--ios-ease),
+              border-color var(--ios-duration-normal) var(--ios-ease);
+}
+
+.chart-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ios-shadow-card);
 }
 
 .chart-header {
@@ -306,8 +318,21 @@
   border-bottom: none;
 }
 
-.data-table tr:hover td {
+.data-table tbody tr {
+  transition: background-color var(--ios-duration-fast) var(--ios-ease),
+              transform var(--ios-duration-fast) var(--ios-ease);
+}
+
+.data-table tbody tr:hover td {
   background: var(--bg-secondary);
+}
+
+.data-table tbody tr:hover {
+  transform: translateX(3px);
+}
+
+.data-table tbody tr:active {
+  transform: scale(0.998);
 }
 
 /* ── Risk & Severity Badges ──────────────────────────────────── */
@@ -391,29 +416,30 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
-  animation: fade-in 0.2s;
+  animation: iosBackdropBlur var(--ios-duration-normal) var(--ios-ease) forwards;
 }
 
 .modal-dialog {
   background: var(--bg-card);
   border-radius: var(--radius-2xl);
   border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--ios-shadow-modal);
   width: 100%;
   max-width: 680px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: slide-in-bottom 0.25s var(--transition-base);
+  animation: iosModalEntrance var(--ios-duration-smooth) var(--ios-spring-soft) forwards;
+  transform-origin: center center;
 }
 
 .modal-header {
@@ -505,19 +531,29 @@
   border-radius: var(--radius-xl);
   background: var(--bg-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: border-color var(--ios-duration-normal) var(--ios-ease),
+              background-color var(--ios-duration-normal) var(--ios-ease),
+              transform var(--ios-duration-normal) var(--ios-spring-soft),
+              box-shadow var(--ios-duration-normal) var(--ios-ease);
   text-align: center;
 }
 
 .dropzone:hover {
   border-color: var(--accent);
   background: var(--accent-faint);
+  transform: translateY(-2px);
+  box-shadow: var(--ios-shadow-card);
+}
+
+.dropzone:active {
+  transform: scale(0.99);
 }
 
 .dropzone.drag-active {
   border-color: var(--accent);
   background: var(--accent-faint);
-  transform: scale(1.01);
+  transform: scale(1.015);
+  box-shadow: var(--ios-shadow-card-hover);
 }
 
 .dropzone-icon-container {
@@ -665,13 +701,13 @@
 }
 
 .progress-bar-fill.indeterminate {
-  animation: progress-pulse 1.5s infinite;
+  animation: progress-pulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @keyframes progress-pulse {
-  0% { opacity: 0.7; }
+  0% { opacity: 0.8; }
   50% { opacity: 1; }
-  100% { opacity: 0.7; }
+  100% { opacity: 0.8; }
 }
 
 /* ── Modern Security Alert Details Modal ─────────────────────── */

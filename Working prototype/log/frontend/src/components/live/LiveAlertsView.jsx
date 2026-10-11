@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import LiveAlertModal from './LiveAlertModal';
+import CustomSelect from '../CustomSelect';
 import { formatDateTime } from '../../useAuthSentinel';
 
 export default function LiveAlertsView({ alerts, onUpdateStatus }) {
@@ -68,41 +69,33 @@ export default function LiveAlertsView({ alerts, onUpdateStatus }) {
           />
 
           {/* Severity Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label htmlFor="severity-filter" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              Severity:
-            </label>
-            <select
-              id="severity-filter"
-              className="dimension-select"
-              value={severityFilter}
-              onChange={(e) => setSeverityFilter(e.target.value)}
-            >
-              <option value="ALL">ALL</option>
-              <option value="CRITICAL">CRITICAL</option>
-              <option value="HIGH">HIGH</option>
-              <option value="MEDIUM">MEDIUM</option>
-              <option value="LOW">LOW</option>
-            </select>
-          </div>
+          <CustomSelect
+            label="Severity:"
+            value={severityFilter}
+            onChange={(e) => setSeverityFilter(e.target.value)}
+            options={[
+              { value: 'ALL', label: 'ALL' },
+              { value: 'CRITICAL', label: 'CRITICAL' },
+              { value: 'HIGH', label: 'HIGH' },
+              { value: 'MEDIUM', label: 'MEDIUM' },
+              { value: 'LOW', label: 'LOW' },
+            ]}
+            style={{ minWidth: '120px' }}
+          />
 
           {/* Status Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label htmlFor="status-filter" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              Status:
-            </label>
-            <select
-              id="status-filter"
-              className="dimension-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="ALL">ALL</option>
-              <option value="OPEN">OPEN</option>
-              <option value="INVESTIGATING">INVESTIGATING</option>
-              <option value="RESOLVED">RESOLVED</option>
-            </select>
-          </div>
+          <CustomSelect
+            label="Status:"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            options={[
+              { value: 'ALL', label: 'ALL' },
+              { value: 'OPEN', label: 'OPEN' },
+              { value: 'INVESTIGATING', label: 'INVESTIGATING' },
+              { value: 'RESOLVED', label: 'RESOLVED' },
+            ]}
+            style={{ minWidth: '140px' }}
+          />
         </div>
 
         <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
@@ -135,7 +128,7 @@ export default function LiveAlertsView({ alerts, onUpdateStatus }) {
                 </td>
               </tr>
             ) : (
-              filteredAlerts.map((al) => {
+              filteredAlerts.map((al, idx) => {
                 const alertId = al.id ? `ALT-${String(al.id).padStart(4, '0')}` : 'ALT-0001';
                 const status = (al.status || (al.resolved ? 'RESOLVED' : 'OPEN')).toUpperCase();
                 const riskLevel = (al.risk_level || 'HIGH').toUpperCase();
@@ -144,7 +137,13 @@ export default function LiveAlertsView({ alerts, onUpdateStatus }) {
                 const lastSeen = formatDateTime(al.triggered_at || al.created_at);
 
                 return (
-                  <tr key={al.id}>
+                  <tr
+                    key={al.id}
+                    style={{
+                      animation: 'iosFadeInUp var(--ios-duration-smooth) var(--ios-ease) both',
+                      animationDelay: `${Math.min(idx * 25, 250)}ms`,
+                    }}
+                  >
                     <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '12px' }}>
                       {alertId}
                     </td>

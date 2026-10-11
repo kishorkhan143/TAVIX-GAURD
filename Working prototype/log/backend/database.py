@@ -33,11 +33,16 @@ def init_db() -> None:
     Create all tables and initialize reference data.
     Safe to call multiple times.
     """
-    # Ensure CSV analytics models and Computer model are registered with Base
+    # Ensure CSV analytics models, Computer model, and legacy models are registered
     from csv_analytics.models import CsvImport, CsvAlert, CsvRecord  # noqa: F401
-    from models import Computer, Laboratory, TerminalAssignment  # noqa: F401
+    import models
+    models.Base.metadata.create_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     with engine.begin() as connection:
+        try:
+            connection.execute(text("ALTER TABLE alerts ADD COLUMN status VARCHAR(32) DEFAULT 'OPEN'"))
+        except Exception:
+            pass
         connection.execute(
             text(
                 "CREATE TABLE IF NOT EXISTS computers ("

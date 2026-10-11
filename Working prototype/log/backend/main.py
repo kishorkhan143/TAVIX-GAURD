@@ -41,7 +41,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import func, select, desc
+from sqlalchemy import func, select, desc, text
 from sqlalchemy.orm import Session
 
 import detection
@@ -207,12 +207,11 @@ async def reset_all(
     """Delete all events and alerts, reset detection windows."""
     db.execute(text("DELETE FROM alerts"))
     db.execute(text("DELETE FROM auth_events"))
-    try:
-        db.execute(text("DELETE FROM csv_alerts"))
-        db.execute(text("DELETE FROM csv_records"))
-        db.execute(text("DELETE FROM csv_imports"))
-    except Exception:
-        pass
+    for tbl in ["incidents", "risk_snapshots", "risk_contributions", "computers", "terminal_assignments", "csv_alerts", "csv_records", "csv_imports"]:
+        try:
+            db.execute(text(f"DELETE FROM {tbl}"))
+        except Exception:
+            pass
     db.commit()
     detection._windows.clear()
     detection._success_alerted.clear()

@@ -97,6 +97,7 @@ class Alert(Base):
     failure_count = Column(Integer, default=0)
     time_window_seconds = Column(Integer, default=0)
     reason = Column(Text, nullable=True)
+    status = Column(String(32), default="OPEN")                      # OPEN / INVESTIGATING / RESOLVED
     resolved = Column(Boolean, default=False)
     triggered_at = Column(
         DateTime(timezone=True),

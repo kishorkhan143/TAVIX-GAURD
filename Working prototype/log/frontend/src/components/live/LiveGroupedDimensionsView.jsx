@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import CustomSelect from '../CustomSelect';
 import LiveGroupDetailsModal from './LiveGroupDetailsModal';
 
 export default function LiveGroupedDimensionsView({ events, alerts }) {
@@ -103,18 +104,17 @@ export default function LiveGroupedDimensionsView({ events, alerts }) {
       {/* Control Toolbar */}
       <div className="grouping-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-            Group By:
-          </span>
-          <select
-            className="dimension-select"
+          <CustomSelect
+            label="Group By:"
             value={groupBy}
             onChange={(e) => setGroupBy(e.target.value)}
-          >
-            <option value="user">User & Source IP</option>
-            <option value="ip">Source IP</option>
-            <option value="status">Status</option>
-          </select>
+            options={[
+              { value: 'user', label: 'User & Source IP' },
+              { value: 'ip', label: 'Source IP' },
+              { value: 'status', label: 'Status' },
+            ]}
+            style={{ minWidth: '150px' }}
+          />
 
           <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
             ({groupedData.length} distinct groups detected)
@@ -164,7 +164,13 @@ export default function LiveGroupedDimensionsView({ events, alerts }) {
               </tr>
             ) : (
               groupedData.map((grp, index) => (
-                <tr key={`${grp.user}-${grp.sourceIp}-${index}`}>
+                <tr
+                  key={`${grp.user}-${grp.sourceIp}-${index}`}
+                  style={{
+                    animation: 'iosFadeInUp var(--ios-duration-smooth) var(--ios-ease) both',
+                    animationDelay: `${Math.min(index * 25, 250)}ms`,
+                  }}
+                >
                   <td style={{ fontWeight: 600 }}>{grp.user}</td>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{grp.sourceIp}</td>
                   <td>

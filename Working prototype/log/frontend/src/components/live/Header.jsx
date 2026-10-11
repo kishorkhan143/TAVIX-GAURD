@@ -41,12 +41,12 @@ export default function Header({ health, wsStatus, onExport }) {
             }}
           >
             <span
+              className={isWsConnected ? "live-pulse-dot" : ""}
               style={{
                 width: '7px',
                 height: '7px',
                 borderRadius: '50%',
                 background: isWsConnected ? '#10b981' : '#ef4444',
-                boxShadow: isWsConnected ? '0 0 6px #10b981' : 'none',
               }}
             />
             {isWsConnected ? 'LIVE STREAM' : 'OFFLINE'}

@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { motion } from 'motion/react';
 import {
   LineChart,
   Line,
@@ -31,27 +32,61 @@ export default function RiskChart({
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Memoize data for better performance
+  const chartData = React.useMemo(() => data, [data]);
+
+  const AnimatedTooltip = React.useCallback(({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <motion.div
+        initial={{opacity: 0, scale: 0.96}}
+        animate={{opacity: 1, scale: 1}}
+        transition={{duration: 0.15, ease: [0.22, 1, 0.36, 1]}}
+        style={{
+          backgroundColor: '#fff',
+          border: '1px solid #e5e7eb',
+          borderRadius: '0.5rem',
+          padding: '8px 12px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          fontSize: '13px',
+        }}
+      >
+        <p style={{margin: 0, color: '#6b7280'}}>{`Time: ${formatTime(label)}`}</p>
+        {payload.map((entry) => (
+          <p key={entry.name} style={{margin: '2px 0', fontWeight: 600, color: entry.color}}>
+            {typeof entry.value === 'number' ? `${entry.value.toFixed(1)}` : entry.value}
+          </p>
+        ))}
+      </motion.div>
+    );
+  }, []);
+
   if (!data || data.length === 0) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: `${height}px`,
-        backgroundColor: '#f9fafb',
-        borderRadius: '0.5rem',
-        border: '1px solid #e5e7eb',
-        color: '#9ca3af'
-      }}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.15 }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: `${height}px`,
+          backgroundColor: '#f9fafb',
+          borderRadius: '0.5rem',
+          border: '1px solid #e5e7eb',
+          color: '#9ca3af'
+        }}
+      >
         No data available
-      </div>
+      </motion.div>
     );
   }
 
   return (
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart 
-        data={data}
+        data={chartData}
         margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
       >
         <defs>
@@ -76,19 +111,7 @@ export default function RiskChart({
         />
         
         <Tooltip
-          contentStyle={{
-            backgroundColor: '#fff',
-            border: '1px solid #e5e7eb',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-          }}
-          formatter={(value) => {
-            if (typeof value === 'number') {
-              return [`${value.toFixed(1)}`, 'Score'];
-            }
-            return [value, 'Score'];
-          }}
-          labelFormatter={(label) => `Time: ${formatTime(label)}`}
+          content={<AnimatedTooltip />}
         />
         
         {showThresholds && (
@@ -128,6 +151,8 @@ export default function RiskChart({
           fillOpacity={1}
           fill="url(#colorScore)"
           isAnimationActive={animated}
+          animationDuration={900}
+          animationEasing="ease-out"
           dot={false}
           strokeWidth={2}
         />

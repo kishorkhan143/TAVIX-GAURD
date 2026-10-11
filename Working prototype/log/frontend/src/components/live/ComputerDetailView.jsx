@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { BACKEND_URL } from '../../useAuthSentinel';
+import CustomSelect from '../CustomSelect';
+import './ComputerDetailView.css';
 
 export default function ComputerDetailView({
   terminalId,
@@ -13,6 +15,9 @@ export default function ComputerDetailView({
   const [logFilter, setLogFilter] = useState('ALL');
   const [logSearch, setLogSearch] = useState('');
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
+  const [expandedIncident, setExpandedIncident] = useState(null);
+  const [evPage, setEvPage] = useState(1);
+  const EV_PAGE_SIZE = 25;
 
   const fetchDetail = useCallback(async (isInitial = false) => {
     if (!terminalId) return;
@@ -42,14 +47,39 @@ export default function ComputerDetailView({
     return () => clearInterval(interval);
   }, [fetchDetail]);
 
+  useEffect(() => {
+    setEvPage(1);
+  }, [logSearch, logFilter]);
+
   const comp = detail?.computer;
   const labInfo = detail?.lab || lab;
   const authEvents = detail?.auth_events || [];
   const incidents = detail?.incidents || [];
 
+  // Deduplicate incidents by ID
+  const uniqueIncidents = useMemo(() => {
+    const seen = new Set();
+    return incidents.filter((inc) => {
+      if (seen.has(inc.id)) return false;
+      seen.add(inc.id);
+      return true;
+    });
+  }, [incidents]);
+
+  // Deduplicate auth events by ID or composite key
+  const uniqueEvents = useMemo(() => {
+    const seen = new Set();
+    return authEvents.filter((ev) => {
+      const key = ev.id ? String(ev.id) : `${ev.event_id}-${ev.timestamp}-${ev.username}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [authEvents]);
+
   // Filter auth event logs
   const filteredEvents = useMemo(() => {
-    return authEvents.filter((ev) => {
+    return uniqueEvents.filter((ev) => {
       const q = logSearch.trim().toLowerCase();
       const matchesSearch =
         !q ||
@@ -64,7 +94,7 @@ export default function ComputerDetailView({
 
       return matchesSearch && matchesStatus;
     });
-  }, [authEvents, logSearch, logFilter]);
+  }, [uniqueEvents, logSearch, logFilter]);
 
   const getStatusBadge = (status) => {
     const s = status || 'Unknown';
@@ -84,16 +114,7 @@ export default function ComputerDetailView({
             border: '1px solid #a7f3d0',
           }}
         >
-          <span
-            style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              background: '#10b981',
-              boxShadow: '0 0 6px #10b981',
-            }}
-          />
-          Online
+          ONLINE
         </span>
       );
     }
@@ -113,15 +134,7 @@ export default function ComputerDetailView({
             border: '1px solid #fecaca',
           }}
         >
-          <span
-            style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              background: '#ef4444',
-            }}
-          />
-          Offline
+          OFFLINE
         </span>
       );
     }
@@ -140,14 +153,6 @@ export default function ComputerDetailView({
           border: '1px solid #e5e7eb',
         }}
       >
-        <span
-          style={{
-            width: '7px',
-            height: '7px',
-            borderRadius: '50%',
-            background: '#9ca3af',
-          }}
-        />
         Unknown
       </span>
     );
@@ -243,27 +248,32 @@ export default function ComputerDetailView({
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={onBackToComputers}
-          id="btn-back-to-computers"
-          className="btn-secondary"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            borderRadius: 'var(--radius-md)',
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-          <span>Back to Connected Computers</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+            Updated: {lastRefreshed.toLocaleTimeString()}
+          </span>
+          <button
+            type="button"
+            onClick={onBackToComputers}
+            id="btn-back-to-computers"
+            className="btn-secondary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              borderRadius: 'var(--radius-md)',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            <span>Back to Connected Computers</span>
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -473,7 +483,7 @@ export default function ComputerDetailView({
                 </div>
 
                 <div>
-                  {incidents.length > 0 ? (
+                  {uniqueIncidents.length > 0 && (
                     <span
                       style={{
                         display: 'inline-flex',
@@ -487,23 +497,7 @@ export default function ComputerDetailView({
                         border: '1px solid #fecaca',
                       }}
                     >
-                      {incidents.length} Active Alert{incidents.length > 1 ? 's' : ''}
-                    </span>
-                  ) : (
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        background: '#ecfdf5',
-                        color: '#059669',
-                        border: '1px solid #a7f3d0',
-                      }}
-                    >
-                      0 Active Alerts
+                      {uniqueIncidents.length} Active Alert{uniqueIncidents.length > 1 ? 's' : ''}
                     </span>
                   )}
                 </div>
@@ -524,12 +518,36 @@ export default function ComputerDetailView({
               >
                 <div>
                   <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '2px' }}>
-                    Last Event ID
+                    Event ID
                   </div>
                   <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                    {comp.last_auth_event
-                      ? `Event ${comp.last_auth_event.event_id} (${comp.last_auth_event.status})`
-                      : 'Not available'}
+                    {comp.last_auth_event ? String(comp.last_auth_event.event_id) : 'Not available'}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '2px' }}>
+                    Result
+                  </div>
+                  <div>
+                    {comp.last_auth_event ? (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          background: comp.last_auth_event.status === 'SUCCESS' ? '#ecfdf5' : '#fee2e2',
+                          color: comp.last_auth_event.status === 'SUCCESS' ? '#059669' : '#dc2626',
+                          border: comp.last_auth_event.status === 'SUCCESS' ? '1px solid #a7f3d0' : '1px solid #fecaca',
+                        }}
+                      >
+                        {comp.last_auth_event.status || 'UNKNOWN'}
+                      </span>
+                    ) : (
+                      renderValue(null)
+                    )}
                   </div>
                 </div>
 
@@ -594,6 +612,28 @@ export default function ComputerDetailView({
                   </div>
                 </div>
               </div>
+
+              {/* Pattern note for SUCCESS_AFTER_FAILURES */}
+              {comp.last_auth_event?.status === 'SUCCESS' &&
+                uniqueIncidents.some(
+                  (inc) =>
+                    inc.alert_type &&
+                    inc.alert_type.toUpperCase().includes('SUCCESS_AFTER_FAILURES')
+                ) && (
+                  <div
+                    style={{
+                      background: '#fffbeb',
+                      border: '1px solid #fde68a',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '10px 12px',
+                      fontSize: '12px',
+                      color: '#92400e',
+                      marginTop: '8px',
+                    }}
+                  >
+                    ⚠ <strong>Suspicious pattern:</strong> Successful login following failed attempts
+                  </div>
+                )}
             </div>
           </div>
 
@@ -610,15 +650,12 @@ export default function ComputerDetailView({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 2px 0', color: 'var(--text-primary)' }}>
-                  Related Security Incidents & Alerts ({incidents.length})
+                  Related Security Incidents & Alerts ({uniqueIncidents.length})
                 </h3>
-                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: 0 }}>
-                  Correlated security detections and attack patterns targeted at or originating from this terminal
-                </p>
               </div>
             </div>
 
-            {incidents.length === 0 ? (
+            {uniqueIncidents.length === 0 ? (
               <div
                 style={{
                   padding: '24px 16px',
@@ -637,65 +674,160 @@ export default function ComputerDetailView({
                 <table className="data-table" style={{ fontSize: '12px', width: '100%' }}>
                   <thead>
                     <tr>
-                      <th style={{ padding: '8px 10px' }}>Alert Type</th>
-                      <th style={{ padding: '8px 10px' }}>Risk Level</th>
-                      <th style={{ padding: '8px 10px' }}>Status</th>
+                      <th style={{ padding: '8px 10px' }}>Incident</th>
+                      <th style={{ padding: '8px 10px' }}>Severity</th>
                       <th style={{ padding: '8px 10px' }}>Account</th>
-                      <th style={{ padding: '8px 10px' }}>Failure Count</th>
-                      <th style={{ padding: '8px 10px' }}>Triggered At</th>
-                      <th style={{ padding: '8px 10px' }}>Detection Reason</th>
+                      <th style={{ padding: '8px 10px' }}>Failed attempts</th>
+                      <th style={{ padding: '8px 10px' }}>Detected at</th>
+                      <th style={{ padding: '8px 10px' }}>Status</th>
+                      <th style={{ padding: '8px 10px' }}>Details</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {incidents.map((inc) => (
-                      <tr key={inc.id}>
-                        <td style={{ padding: '8px 10px', fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
-                          {inc.alert_type}
-                        </td>
-                        <td style={{ padding: '8px 10px' }}>
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              padding: '2px 7px',
-                              borderRadius: '4px',
-                              fontSize: '10px',
-                              fontWeight: 700,
-                              background:
-                                inc.risk_level === 'HIGH' || inc.risk_level === 'CRITICAL'
-                                  ? '#fee2e2'
-                                  : '#fef3c7',
-                              color:
-                                inc.risk_level === 'HIGH' || inc.risk_level === 'CRITICAL'
-                                  ? '#dc2626'
-                                  : '#d97706',
-                            }}
-                          >
-                            {inc.risk_level}
-                          </span>
-                        </td>
-                        <td style={{ padding: '8px 10px' }}>
-                          <span
-                            style={{
-                              fontSize: '10px',
-                              fontWeight: 700,
-                              padding: '2px 7px',
-                              borderRadius: '4px',
-                              background: inc.resolved ? '#ecfdf5' : '#fee2e2',
-                              color: inc.resolved ? '#059669' : '#dc2626',
-                            }}
-                          >
-                            {inc.status || (inc.resolved ? 'RESOLVED' : 'OPEN')}
-                          </span>
-                        </td>
-                        <td style={{ padding: '8px 10px', fontWeight: 600 }}>{inc.username || '—'}</td>
-                        <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)' }}>{inc.failure_count || 1}</td>
-                        <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                          {inc.triggered_at ? new Date(inc.triggered_at).toLocaleString('en-GB') : '—'}
-                        </td>
-                        <td style={{ padding: '8px 10px', fontSize: '11px', color: 'var(--text-secondary)', maxWidth: '280px' }}>
-                          {inc.reason || 'Threshold-based detection triggered'}
-                        </td>
-                      </tr>
+                    {uniqueIncidents.map((inc) => (
+                      <React.Fragment key={inc.id}>
+                        <tr>
+                          <td style={{ padding: '8px 10px' }}>
+                            <div style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-primary)' }}>
+                              {inc.alert_type === 'SUCCESS_AFTER_FAILURES'
+                                ? 'Successful login after 3 failed attempts'
+                                : inc.alert_type === 'BRUTE_FORCE'
+                                ? 'Brute force attack detected'
+                                : inc.alert_type === 'MULTIPLE_FAILURES'
+                                ? 'Multiple authentication failures'
+                                : inc.alert_type === 'ACCOUNT_LOCKOUT'
+                                ? 'Account lockout triggered'
+                                : (inc.alert_type || '—').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                            </div>
+                            <div
+                              style={{
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: '10px',
+                                color: 'var(--text-tertiary)',
+                                marginTop: '2px',
+                              }}
+                            >
+                              {inc.alert_type}
+                            </div>
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                background:
+                                  inc.risk_level === 'CRITICAL'
+                                    ? '#fee2e2'
+                                    : inc.risk_level === 'HIGH'
+                                    ? '#fee2e2'
+                                    : inc.risk_level === 'MEDIUM'
+                                    ? '#fef3c7'
+                                    : '#ecfdf5',
+                                color:
+                                  inc.risk_level === 'CRITICAL'
+                                    ? '#b91c1c'
+                                    : inc.risk_level === 'HIGH'
+                                    ? '#dc2626'
+                                    : inc.risk_level === 'MEDIUM'
+                                    ? '#d97706'
+                                    : '#059669',
+                                border:
+                                  inc.risk_level === 'CRITICAL'
+                                    ? '1px solid #fecaca'
+                                    : inc.risk_level === 'HIGH'
+                                    ? '1px solid #fecaca'
+                                    : inc.risk_level === 'MEDIUM'
+                                    ? '1px solid #fcd34d'
+                                    : '1px solid #a7f3d0',
+                              }}
+                            >
+                              {inc.risk_level === 'CRITICAL'
+                                ? 'Critical'
+                                : inc.risk_level === 'HIGH'
+                                ? 'High'
+                                : inc.risk_level === 'MEDIUM'
+                                ? 'Medium'
+                                : 'Low'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 10px', fontWeight: 600 }}>
+                            {inc.username || '—'}
+                          </td>
+                          <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)' }}>
+                            {inc.failure_count || 1}
+                          </td>
+                          <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            {inc.triggered_at
+                              ? new Date(inc.triggered_at).toLocaleString('en-GB')
+                              : '—'}
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                background:
+                                  inc.status === 'RESOLVED' ? '#ecfdf5' : inc.status === 'OPEN' ? '#fee2e2' : '#f3f4f6',
+                                color:
+                                  inc.status === 'RESOLVED' ? '#059669' : inc.status === 'OPEN' ? '#dc2626' : '#6b7280',
+                                border:
+                                  inc.status === 'RESOLVED'
+                                    ? '1px solid #a7f3d0'
+                                    : inc.status === 'OPEN'
+                                    ? '1px solid #fecaca'
+                                    : '1px solid #e5e7eb',
+                              }}
+                            >
+                              {inc.status || (inc.resolved ? 'RESOLVED' : 'OPEN')}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedIncident(expandedIncident === inc.id ? null : inc.id)
+                              }
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: 'var(--accent)',
+                                fontWeight: 600,
+                                fontSize: '11px',
+                                padding: '2px 4px',
+                              }}
+                            >
+                              {expandedIncident === inc.id ? '▼ Hide' : '▶ Show'}
+                            </button>
+                          </td>
+                        </tr>
+                        {expandedIncident === inc.id && (
+                          <tr>
+                            <td colSpan="7" style={{ padding: '0' }}>
+                              <div
+                                style={{
+                                  background: 'var(--bg-secondary)',
+                                  borderTop: '1px solid var(--border-light)',
+                                  padding: '12px 16px',
+                                  fontSize: '12px',
+                                  color: 'var(--text-secondary)',
+                                  lineHeight: 1.5,
+                                }}
+                              >
+                                <strong style={{ color: 'var(--text-primary)' }}>Detection Details:</strong>
+                                <div style={{ marginTop: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+                                  {inc.reason || 'Threshold-based detection triggered'}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -725,11 +857,8 @@ export default function ComputerDetailView({
             >
               <div>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 2px 0', color: 'var(--text-primary)' }}>
-                  Authentication Event Logs History ({authEvents.length})
+                  Authentication Event Logs History ({filteredEvents.length})
                 </h3>
-                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: 0 }}>
-                  Recent Windows Event Log telemetry records (4624/4625) recorded for this terminal
-                </p>
               </div>
 
               {/* Log Search & Filter Controls */}
@@ -751,23 +880,17 @@ export default function ComputerDetailView({
                   }}
                 />
 
-                <select
+                <CustomSelect
                   value={logFilter}
                   onChange={(e) => setLogFilter(e.target.value)}
-                  style={{
-                    padding: '5px 8px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-normal)',
-                    fontSize: '11px',
-                    background: 'var(--bg-primary)',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="ALL">All Events</option>
-                  <option value="SUCCESS">Success Only</option>
-                  <option value="FAILURE">Failures Only</option>
-                </select>
+                  options={[
+                    { value: 'ALL', label: 'All Events' },
+                    { value: 'SUCCESS', label: 'Success Only' },
+                    { value: 'FAILURE', label: 'Failures Only' },
+                  ]}
+                  placeholder="Filter logs..."
+                  style={{ minWidth: '140px' }}
+                />
               </div>
             </div>
 
@@ -777,94 +900,150 @@ export default function ComputerDetailView({
                   <tr>
                     <th style={{ padding: '8px 10px' }}>Timestamp</th>
                     <th style={{ padding: '8px 10px' }}>Event ID</th>
-                    <th style={{ padding: '8px 10px' }}>Account / Username</th>
-                    <th style={{ padding: '8px 10px' }}>Logon Type</th>
-                    <th style={{ padding: '8px 10px' }}>Status</th>
-                    <th style={{ padding: '8px 10px' }}>Source IP</th>
-                    <th style={{ padding: '8px 10px' }}>Source Host</th>
-                    <th style={{ padding: '8px 10px' }}>Risk Level</th>
+                    <th style={{ padding: '8px 10px' }}>Account</th>
+                    <th style={{ padding: '8px 10px' }}>Logon type</th>
+                    <th style={{ padding: '8px 10px' }}>Result</th>
+                    <th style={{ padding: '8px 10px' }}>Source</th>
+                    <th style={{ padding: '8px 10px' }}>Risk</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEvents.length === 0 ? (
                     <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-tertiary)' }}>
-                        {authEvents.length === 0
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-tertiary)' }}>
+                        {uniqueEvents.length === 0
                           ? 'No authentication events recorded for this computer.'
-                          : 'No events match the filter.'}
+                          : 'No events match the current filter.'}
                       </td>
                     </tr>
                   ) : (
-                    filteredEvents.map((ev) => (
-                      <tr key={ev.id}>
-                        <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
-                          {ev.timestamp ? new Date(ev.timestamp).toLocaleString('en-GB') : '—'}
-                        </td>
-                        <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
-                          Event {ev.event_id}
-                        </td>
-                        <td style={{ padding: '8px 10px', fontWeight: 600 }}>{ev.username || '—'}</td>
-                        <td style={{ padding: '8px 10px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                          {ev.logon_type_description || `Type ${ev.logon_type || '—'}`}
-                        </td>
-                        <td style={{ padding: '8px 10px' }}>
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              fontWeight: 700,
-                              fontSize: '11px',
-                              color: ev.status === 'SUCCESS' ? '#10b981' : '#ef4444',
-                            }}
-                          >
+                    filteredEvents
+                      .slice((evPage - 1) * EV_PAGE_SIZE, evPage * EV_PAGE_SIZE)
+                      .map((ev) => (
+                        <tr key={ev.id || `${ev.event_id}-${ev.timestamp}-${ev.username}`}>
+                          <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+                            {ev.timestamp ? new Date(ev.timestamp).toLocaleString('en-GB') : '—'}
+                          </td>
+                          <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                            {ev.event_id || '—'}
+                          </td>
+                          <td style={{ padding: '8px 10px', fontWeight: 600 }}>{ev.username || '—'}</td>
+                          <td style={{ padding: '8px 10px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            {ev.logon_type_description || `Type ${ev.logon_type || '—'}`}
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
                             <span
                               style={{
-                                width: '5px',
-                                height: '5px',
-                                borderRadius: '50%',
-                                background: ev.status === 'SUCCESS' ? '#10b981' : '#ef4444',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                fontWeight: 700,
+                                fontSize: '11px',
+                                background: ev.status === 'SUCCESS' ? '#ecfdf5' : '#fee2e2',
+                                color: ev.status === 'SUCCESS' ? '#059669' : '#dc2626',
+                                border: ev.status === 'SUCCESS' ? '1px solid #a7f3d0' : '1px solid #fecaca',
                               }}
-                            />
-                            {ev.status || 'UNKNOWN'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
-                          {ev.source_ip || 'Local'}
-                        </td>
-                        <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
-                          {ev.source_host || '—'}
-                        </td>
-                        <td style={{ padding: '8px 10px' }}>
-                          <span
-                            style={{
-                              fontSize: '10px',
-                              fontWeight: 700,
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background:
-                                ev.risk_level === 'HIGH'
-                                  ? '#fee2e2'
-                                  : ev.risk_level === 'MEDIUM'
-                                  ? '#fef3c7'
-                                  : '#ecfdf5',
-                              color:
-                                ev.risk_level === 'HIGH'
-                                  ? '#dc2626'
-                                  : ev.risk_level === 'MEDIUM'
-                                  ? '#d97706'
-                                  : '#059669',
-                            }}
-                          >
-                            {ev.risk_level || 'LOW'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
+                            >
+                              {ev.status || 'UNKNOWN'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 10px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            <div style={{ fontFamily: 'var(--font-mono)' }}>{ev.source_ip || 'Local'}</div>
+                            {ev.source_host && ev.source_host !== ev.source_ip && (
+                              <div
+                                style={{
+                                  fontFamily: 'var(--font-mono)',
+                                  fontSize: '10px',
+                                  color: 'var(--text-tertiary)',
+                                  marginTop: '1px',
+                                }}
+                              >
+                                {ev.source_host}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                background:
+                                  ev.risk_level === 'HIGH'
+                                    ? '#fee2e2'
+                                    : ev.risk_level === 'MEDIUM'
+                                    ? '#fef3c7'
+                                    : '#ecfdf5',
+                                color:
+                                  ev.risk_level === 'HIGH'
+                                    ? '#dc2626'
+                                    : ev.risk_level === 'MEDIUM'
+                                    ? '#d97706'
+                                    : '#059669',
+                              }}
+                            >
+                              {ev.risk_level || 'LOW'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
                   )}
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {filteredEvents.length > EV_PAGE_SIZE && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  marginTop: '12px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setEvPage((p) => Math.max(1, p - 1))}
+                  disabled={evPage === 1}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: evPage === 1 ? 'var(--text-tertiary)' : 'var(--accent)',
+                    cursor: evPage === 1 ? 'default' : 'pointer',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                  }}
+                >
+                  ← Prev
+                </button>
+                <span style={{ fontWeight: 600 }}>
+                  Page {evPage} of {Math.ceil(filteredEvents.length / EV_PAGE_SIZE)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEvPage((p) => Math.min(Math.ceil(filteredEvents.length / EV_PAGE_SIZE), p + 1))
+                  }
+                  disabled={evPage === Math.ceil(filteredEvents.length / EV_PAGE_SIZE)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: evPage === Math.ceil(filteredEvents.length / EV_PAGE_SIZE) ? 'var(--text-tertiary)' : 'var(--accent)',
+                    cursor: evPage === Math.ceil(filteredEvents.length / EV_PAGE_SIZE) ? 'default' : 'pointer',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                  }}
+                >
+                  Next →
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}
