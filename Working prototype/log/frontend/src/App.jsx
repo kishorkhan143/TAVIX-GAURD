@@ -354,17 +354,113 @@ function OverviewSection({ events, alerts }) {
       </div>
 
       <motion.div
-        className="events-panel"
+        className="overview-bottom-row"
         initial={{ opacity: 0, y: 16 }}
         whileInView={{ opacity: 1, y: 0 }}
         transition={springs.soft}
         viewport={{ once: true, margin: '-40px' }}
       >
-        <div className="panel-header">
-          <h3>Recent Events</h3>
-          <span className="badge">{filteredEvents.length}</span>
+        {/* Left: Recent Events panel */}
+        <div className="events-panel">
+          <div className="panel-header">
+            <h3>Recent Events</h3>
+            <span className="badge">{filteredEvents.length}</span>
+          </div>
+          <EventsTable events={filteredEvents} emptyMessage={`No events on ${displayDate}`} />
         </div>
-        <EventsTable events={filteredEvents} emptyMessage={`No events on ${displayDate}`} />
+
+        {/* Right: Event & Alert Trends chart */}
+        <div className="trend-chart-panel">
+          <div className="trend-chart-header">
+            <span className="trend-chart-title">Event &amp; Alert Trends</span>
+            <span className="trend-time-badge">24 hour les</span>
+          </div>
+
+          {/* Y axis + SVG */}
+          <div className="trend-chart-body">
+            <div className="trend-yaxis">
+              {[10, 8, 6, 4, 2, 0].map((v) => (
+                <span key={v}>{v}</span>
+              ))}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <svg
+                viewBox="0 0 320 130"
+                preserveAspectRatio="none"
+                className="trend-svg"
+              >
+                <defs>
+                  <linearGradient id="trendGradTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0066ff" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#0066ff" stopOpacity="0.03" />
+                  </linearGradient>
+                  <linearGradient id="trendGradSuccess" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                  </linearGradient>
+                  <linearGradient id="trendGradFailed" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ef4444" stopOpacity="0.18" />
+                    <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Grid lines */}
+                {[0, 26, 52, 78, 104, 130].map((y) => (
+                  <line key={y} x1="0" y1={y} x2="320" y2={y} stroke="#f0f0f0" strokeWidth="0.8" />
+                ))}
+
+                {/* Build points from live trend data */}
+                {(() => {
+                  const W = 320, H = 120;
+                  const toPath = (data, filled) => {
+                    if (!data || data.length < 2) return filled ? `M0,${H} L320,${H}` : `M0,${H}`;
+                    const max = Math.max(...data, 1);
+                    const pts = data.map((v, i) => {
+                      const x = (i / (data.length - 1)) * W;
+                      const y = H - (v / max) * (H - 8);
+                      return `${x.toFixed(1)},${y.toFixed(1)}`;
+                    });
+                    if (filled) {
+                      return `M${pts[0]} ` +
+                        pts.slice(1).map((p) => `L${p}`).join(' ') +
+                        ` L${W},${H} L0,${H} Z`;
+                    }
+                    return `M${pts[0]} ` + pts.slice(1).map((p) => `L${p}`).join(' ');
+                  };
+
+                  return (
+                    <>
+                      {/* Filled areas */}
+                      <path d={toPath(trends.total, true)} fill="url(#trendGradTotal)" />
+                      <path d={toPath(trends.successful, true)} fill="url(#trendGradSuccess)" />
+                      <path d={toPath(trends.failed, true)} fill="url(#trendGradFailed)" />
+                      {/* Lines */}
+                      <path d={toPath(trends.total, false)} fill="none" stroke="#0066ff" strokeWidth="2" strokeLinejoin="round" />
+                      <path d={toPath(trends.successful, false)} fill="none" stroke="#10b981" strokeWidth="2" strokeLinejoin="round" />
+                      <path d={toPath(trends.failed, false)} fill="none" stroke="#ef4444" strokeWidth="2" strokeLinejoin="round" />
+                      <path d={toPath(trends.alerts, false)} fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="5,4" strokeLinejoin="round" />
+                    </>
+                  );
+                })()}
+              </svg>
+
+              {/* X labels */}
+              <div className="trend-xlabels">
+                {['0h','3h','6h','9h','12h','15h','18h','21h','24h'].map((l) => (
+                  <span key={l}>{l}</span>
+                ))}
+              </div>
+
+              {/* Legend */}
+              <div className="trend-legend">
+                <div className="trend-leg"><span className="trend-leg-dot" style={{ background: '#0066ff' }} />Total</div>
+                <div className="trend-leg"><span className="trend-leg-dot" style={{ background: '#10b981' }} />Successful</div>
+                <div className="trend-leg"><span className="trend-leg-dot" style={{ background: '#ef4444' }} />Failed</div>
+                <div className="trend-leg"><span className="trend-leg-dash" style={{ borderColor: '#f59e0b' }} />Alerts</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </motion.div>
 
       <motion.div
