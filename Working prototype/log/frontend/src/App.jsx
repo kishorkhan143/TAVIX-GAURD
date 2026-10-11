@@ -273,236 +273,44 @@ function StatusBadge({ label, online, count }) {
   );
 }
 
-// ── Overview: Event Timeline Analytics ───────────────────────────────────────
 function OverviewSection({ events, alerts }) {
   const { selectedDate, isToday, resetToToday, displayDate } = useDateFilter();
   const motionPrefs = useMotionPrefs();
   const fadeUpVariant = motionPrefs.fadeUp || variants.fadeUp;
-
+  
   const filteredEvents = filterByDate(events, selectedDate);
   const filteredAlerts = filterByDate(alerts, selectedDate);
 
-  const totalEvents   = filteredEvents.length;
-  const successful    = filteredEvents.filter((e) => e.status === 'SUCCESS').length;
-  const failed        = filteredEvents.filter((e) => e.status === 'FAILURE').length;
-  const activeAlerts  = filteredAlerts.filter((a) => !a.resolved).length;
-
-  const trends = useMemo(
-    () => generateTrendIntervals(filteredEvents, filteredAlerts, 12),
-    [filteredEvents, filteredAlerts]
-  );
-
-  // Build SVG polyline points from a data array, fitting into viewBox 0 0 W H
-  const toPoints = (data, W = 320, H = 90) => {
-    if (!data || data.length < 2) return `0,${H} ${W},${H}`;
-    const max = Math.max(...data, 1);
-    return data
-      .map((v, i) => {
-        const x = (i / (data.length - 1)) * W;
-        const y = H - (v / max) * (H - 6);
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(' ');
-  };
-
-  const totalPts   = toPoints(trends.total);
-  const successPts = toPoints(trends.successful);
-  const failedPts  = toPoints(trends.failed);
-  const alertPts   = toPoints(trends.alerts);
-
-  // Donut segments from real data
-  const total3 = (successful + failed + activeAlerts) || 1;
-  const pctS = successful / total3;
-  const pctF = failed / total3;
-  const pctA = activeAlerts / total3;
-  const circ = 2 * Math.PI * 38;
-  const segS = circ * pctS;
-  const segF = circ * pctF;
-  const segA = circ * pctA;
-
-  const dominantPct = Math.round(Math.max(pctS, pctF, pctA) * 100);
-  const dominantLabel = pctF >= pctS && pctF >= pctA ? 'Failure' : pctS >= pctA ? 'Success' : 'Anomaly';
-
-  return (
-    <motion.div
-      className="section ov-section"
-      variants={fadeUpVariant}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-    >
-      {/* Header */}
-      <div className="ov-header">
-        <div>
-          <h2 className="ov-title">Event Timeline Analytics</h2>
-        </div>
-        {!isToday && (
-          <motion.div
-            className="viewing-past-date-pill"
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={springs.snappy}
-          >
-            <span>Viewing {displayDate}</span>
-            <button type="button" className="btn-back-to-live" onClick={resetToToday}>Back to live</button>
-          </motion.div>
-        )}
-      </div>
-
-      {/* Charts row */}
-      <div className="ov-charts-row">
-
-        {/* Left: Trend line chart */}
-        <motion.div
-          className="ov-chart-card"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springs.soft, delay: 0.05 }}
-        >
-          <div className="ov-chart-header">
-            <span className="ov-chart-title">Event &amp; Alert Trends</span>
-            <span className="ov-time-badge">24 hour les</span>
-          </div>
-
-          {/* Y-axis + SVG */}
-          <div className="ov-chart-body">
-            <div className="ov-yaxis">
-              {[totalEvents, '', Math.round(totalEvents * 0.6), '', Math.round(totalEvents * 0.3), '', 1].map((v, i) => (
-                <span key={i}>{v}</span>
-              ))}
-            </div>
-            <div style={{ flex: 1 }}>
-              <svg viewBox="0 0 320 90" preserveAspectRatio="none" className="ov-svg">
-                <defs>
-                  <linearGradient id="ovGT" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0066ff" stopOpacity="0.18" />
-                    <stop offset="100%" stopColor="#0066ff" stopOpacity="0" />
-                  </linearGradient>
-                  <linearGradient id="ovGS" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.14" />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-                  </linearGradient>
-                  <linearGradient id="ovGF" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ef4444" stopOpacity="0.14" />
-                    <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                {/* Grid */}
-                {[15, 30, 45, 60, 75].map((y) => (
-                  <line key={y} x1="0" y1={y} x2="320" y2={y} stroke="#f0f0f0" strokeWidth="0.8" />
-                ))}
-                {/* Area fills */}
-                <polygon fill="url(#ovGT)" points={`${totalPts} 320,90 0,90`} />
-                <polygon fill="url(#ovGS)" points={`${successPts} 320,90 0,90`} />
-                <polygon fill="url(#ovGF)" points={`${failedPts} 320,90 0,90`} />
-                {/* Lines */}
-                <polyline fill="none" stroke="#0066ff" strokeWidth="2" strokeLinejoin="round" points={totalPts} />
-                <polyline fill="none" stroke="#10b981" strokeWidth="2" strokeLinejoin="round" points={successPts} />
-                <polyline fill="none" stroke="#ef4444" strokeWidth="2" strokeLinejoin="round" points={failedPts} />
-                <polyline fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="5,4" strokeLinejoin="round" points={alertPts} />
-              </svg>
-              {/* X labels */}
-              <div className="ov-xlabels">
-                {['0h','3h','6h','9h','12h','15h','18h','21h','24h'].map((l) => <span key={l}>{l}</span>)}
-              </div>
-              {/* Legend */}
-              <div className="ov-legend">
-                <div className="ov-leg"><span className="ov-leg-dot" style={{ background: '#0066ff' }} />Total</div>
-                <div className="ov-leg"><span className="ov-leg-dot" style={{ background: '#10b981' }} />Successful</div>
-                <div className="ov-leg"><span className="ov-leg-dot" style={{ background: '#ef4444' }} />Failed</div>
-                <div className="ov-leg"><span className="ov-leg-dash" style={{ borderColor: '#f59e0b' }} />Alerts</div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Right: Donut */}
-        <motion.div
-          className="ov-chart-card"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springs.soft, delay: 0.1 }}
-        >
-          <div className="ov-chart-title" style={{ marginBottom: 14 }}>System Health</div>
-          <div className="ov-donut-wrap">
-            <svg viewBox="0 0 100 100" className="ov-donut-svg">
-              {/* Background */}
-              <circle cx="50" cy="50" r="38" fill="none" stroke="#e5e7eb" strokeWidth="16" />
-              {/* Success */}
-              <circle cx="50" cy="50" r="38" fill="none" stroke="#10b981" strokeWidth="16"
-                strokeDasharray={`${segS.toFixed(1)} ${(circ - segS).toFixed(1)}`}
-                strokeDashoffset="0" transform="rotate(-90 50 50)" />
-              {/* Failure */}
-              <circle cx="50" cy="50" r="38" fill="none" stroke="#ef4444" strokeWidth="16"
-                strokeDasharray={`${segF.toFixed(1)} ${(circ - segF).toFixed(1)}`}
-                strokeDashoffset={`-${segS.toFixed(1)}`} transform="rotate(-90 50 50)" />
-              {/* Anomaly */}
-              <circle cx="50" cy="50" r="38" fill="none" stroke="#f59e0b" strokeWidth="16"
-                strokeDasharray={`${segA.toFixed(1)} ${(circ - segA).toFixed(1)}`}
-                strokeDashoffset={`-${(segS + segF).toFixed(1)}`} transform="rotate(-90 50 50)" />
-              {/* Center hole */}
-              <circle cx="50" cy="50" r="25" fill="white" />
-              <text x="50" y="46" textAnchor="middle" fontSize="13" fontWeight="800" fill="#111827" fontFamily="var(--font-mono)">{dominantPct}%</text>
-              <text x="50" y="57" textAnchor="middle" fontSize="7" fill="#9ca3af" fontFamily="var(--font-sans)">{dominantLabel}</text>
-            </svg>
-            <div className="ov-donut-legend">
-              <div className="ov-dl-item"><span className="ov-dl-sw" style={{ background: '#10b981' }} />{Math.round(pctS * 100)}% Success</div>
-              <div className="ov-dl-item"><span className="ov-dl-sw" style={{ background: '#ef4444' }} />{Math.round(pctF * 100)}% Failure</div>
-              <div className="ov-dl-item"><span className="ov-dl-sw" style={{ background: '#f59e0b' }} />{Math.round(pctA * 100)}% Anomaly</div>
-            </div>
-          </div>
-        </motion.div>
-
-      </div>{/* /ov-charts-row */}
-    </motion.div>
-  );
-}
-
-// ── Incidents: Status, Events & Triage ───────────────────────────────────────
-function LiveTelemetrySection({ events, alerts }) {
-  const { selectedDate, isToday, resetToToday, displayDate } = useDateFilter();
-  const motionPrefs = useMotionPrefs();
-  const fadeUpVariant = motionPrefs.fadeUp || variants.fadeUp;
-
-  const filteredEvents = filterByDate(events, selectedDate);
-  const filteredAlerts = filterByDate(alerts, selectedDate);
-
-  const totalEvents  = filteredEvents.length;
-  const successful   = filteredEvents.filter((e) => e.status === 'SUCCESS').length;
-  const failed       = filteredEvents.filter((e) => e.status === 'FAILURE').length;
+  const totalEvents = filteredEvents.length;
+  const successfulLogins = filteredEvents.filter((e) => e.status === 'SUCCESS').length;
+  const failedLogins = filteredEvents.filter((e) => e.status === 'FAILURE').length;
   const activeAlerts = filteredAlerts.filter((a) => !a.resolved).length;
-  const resolved     = filteredAlerts.filter((a) => a.resolved).length;
 
   const trends = useMemo(
     () => generateTrendIntervals(filteredEvents, filteredAlerts, 12),
     [filteredEvents, filteredAlerts]
   );
 
-  const [selectedIncident, setSelectedIncident] = useState(null);
-
-  // Auto-select the first unresolved alert for drill-down
-  const firstAlert = filteredAlerts.find((a) => !a.resolved) || filteredAlerts[0] || null;
-  const drillAlert = selectedIncident || firstAlert;
-
-  // Build drill-down timeline from events matching drillAlert user
-  const drillEvents = drillAlert
-    ? filteredEvents
-        .filter((e) => e.username === drillAlert.username)
-        .slice(0, 5)
-    : [];
+  const statCards = [
+    { id: 'total', label: 'Total Events', icon: 'activity', value: totalEvents, color: '#0066ff', data: trends.total },
+    { id: 'success', label: 'Successful', icon: 'check-circle', value: successfulLogins, color: '#10b981', data: trends.successful },
+    { id: 'failed', label: 'Failed', icon: 'x-circle', value: failedLogins, color: '#ef4444', data: trends.failed },
+    { id: 'alerts', label: 'Alerts', icon: 'alert-triangle', value: activeAlerts, color: '#f59e0b', data: trends.alerts, isAlert: true },
+  ];
 
   return (
     <motion.div
-      className="section inc-section"
+      className="section"
       variants={fadeUpVariant}
       initial="hidden"
       animate="visible"
       exit="exit"
     >
-      {/* Header row */}
-      <div className="inc-hdr-row">
-        <h2 className="inc-title">Incidents Queue</h2>
-        <div className="inc-hdr-pills">
+      <div className="section-header">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h2>System Status</h2>
+          </div>
           {!isToday && (
             <motion.div
               className="viewing-past-date-pill"
@@ -511,242 +319,139 @@ function LiveTelemetrySection({ events, alerts }) {
               transition={springs.snappy}
             >
               <span>Viewing {displayDate}</span>
-              <button type="button" className="btn-back-to-live" onClick={resetToToday}>Back to live</button>
+              <button type="button" className="btn-back-to-live" onClick={resetToToday}>
+                Back to live
+              </button>
             </motion.div>
           )}
-          <span className="inc-open-pill">Open ({activeAlerts})</span>
-          <span className="inc-res-pill">Resolved ({resolved})</span>
-          <ExportAnalysisDropdown alerts={filteredAlerts.length > 0 ? filteredAlerts : alerts} />
         </div>
       </div>
 
-      {/* System Status mini cards */}
-      <div className="inc-stat-row">
-        {[
-          { label: 'TOTAL EVENTS', value: totalEvents, color: '#0066ff', icon: 'activity', data: trends.total },
-          { label: 'SUCCESSFUL',   value: successful,  color: '#10b981', icon: 'check-circle', data: trends.successful },
-          { label: 'FAILED',       value: failed,      color: '#ef4444', icon: 'x-circle', data: trends.failed },
-          { label: 'ALERTS',       value: activeAlerts,color: '#f59e0b', icon: 'alert-triangle', data: trends.alerts },
-        ].map((c, i) => (
+      <div className="stats-grid">
+        {statCards.map((card, idx) => (
           <motion.div
-            key={c.label}
-            className="inc-mini-card"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...springs.soft, delay: i * 0.04 }}
-            whileHover={{ y: -2 }}
+            key={card.id}
+            className={`stat-card ${card.isAlert ? 'alert' : ''}`}
+            variants={fadeUpVariant}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={{ ...springs.soft, delay: idx * 0.05 }}
+            whileHover={{ y: -3 }}
           >
-            <div className="inc-mini-label">{c.label}</div>
-            <div className="inc-mini-row">
-              <div style={{ color: c.color }}><Icon name={c.icon} size={20} /></div>
-              <div className="inc-mini-val" style={{ color: c.color }}>{c.value}</div>
+            <div className="stat-label">{card.label}</div>
+            <div className="stat-content">
+              <div className="stat-icon">
+                <Icon name={card.icon} size={32} />
+              </div>
+              <div className="stat-value">{card.value}</div>
             </div>
-            <Sparkline data={c.data} color={c.color} height={28} id={`inc-spark-${c.label}`} />
+            <div className="stat-chart">
+              <Sparkline data={card.data} color={card.color} height={40} id={`sparkline-${card.id}`} />
+            </div>
           </motion.div>
         ))}
       </div>
 
-      {/* Three-column content */}
-      <div className="inc-three-col">
+      <motion.div
+        className="events-panel"
+        initial={{ opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={springs.soft}
+        viewport={{ once: true, margin: '-40px' }}
+      >
+        <div className="panel-header">
+          <h3>Recent Events</h3>
+          <span className="badge">{filteredEvents.length}</span>
+        </div>
+        <EventsTable events={filteredEvents} emptyMessage={`No events on ${displayDate}`} />
+      </motion.div>
 
-        {/* Col 1: Recent Activities & Events */}
-        <motion.div
-          className="inc-panel"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springs.soft, delay: 0.06 }}
-        >
-          <div className="inc-panel-hdr">
-            <span className="inc-panel-title">Recent Activities &amp; Events</span>
-          </div>
-          <div className="inc-panel-body">
-            {filteredEvents.length === 0 ? (
-              <div className="empty-state"><p>No events on {displayDate}</p></div>
-            ) : (
-              <table className="inc-evt-table">
-                <thead>
-                  <tr>
-                    <th>Times</th>
-                    <th>Activity</th>
-                    <th>Event Type</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <AnimatePresence initial={false}>
-                    {filteredEvents.slice(0, 12).map((ev, idx) => (
-                      <motion.tr
-                        key={ev.id}
-                        layout="position"
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ ...springs.snappy, delay: Math.min(idx * 0.02, 0.08) }}
-                      >
-                        <td className="inc-td-time">{fmtTime(ev.timestamp)}</td>
-                        <td className="inc-td-user">{ev.username || '—'}</td>
-                        <td className="inc-td-type">
-                          {ev.status === 'SUCCESS' ? 'Access' : 'Auth attempt'}
-                        </td>
-                        <td>
-                          <span className={`inc-risk-tag ${ev.risk_level === 'HIGH' ? 'rhi' : ev.risk_level === 'MEDIUM' ? 'rmed' : 'rlo'}`}>
-                            {ev.risk_level}
-                          </span>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </AnimatePresence>
-                </tbody>
-              </table>
-            )}
-          </div>
-        </motion.div>
+      <motion.div
+        className="alerts-panel"
+        initial={{ opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={springs.soft}
+        viewport={{ once: true, margin: '-40px' }}
+      >
+        <div className="panel-header">
+          <h3>Active Alerts</h3>
+          <span className="badge alert">{filteredAlerts.length}</span>
+        </div>
+        <AlertList alerts={filteredAlerts} emptyMessage={`No incidents on ${displayDate}`} />
+      </motion.div>
+    </motion.div>
+  );
+}
 
-        {/* Col 2: Incidents & Anomalies Triage */}
-        <motion.div
-          className="inc-panel"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springs.soft, delay: 0.1 }}
-        >
-          <div className="inc-panel-hdr">
-            <span className="inc-panel-title">Incidents &amp; Anomalies</span>
-            <span className="inc-panel-sub">Investigation/Triage Queue</span>
-          </div>
-          <div className="inc-panel-body">
-            {filteredAlerts.length === 0 ? (
-              <div className="empty-state"><p>No incidents on {displayDate}</p></div>
-            ) : (
-              <AnimatePresence initial={false}>
-                {filteredAlerts.slice(0, 8).map((al, idx) => {
-                  const typeLabel = alertTypeLabel(al.alert_type);
-                  const isSelected = drillAlert?.id === al.id;
-                  const isCritical = al.risk_level === 'HIGH' || al.failure_count >= 5;
-                  return (
-                    <motion.div
-                      key={al.id}
-                      className={`inc-triage-item${isSelected ? ' inc-triage-selected' : ''}`}
-                      layout="position"
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ ...springs.snappy, delay: Math.min(idx * 0.03, 0.1) }}
-                      onClick={() => setSelectedIncident(al)}
-                    >
-                      <div className="inc-tr-top">
-                        <div className="inc-tr-avatar">{(al.username || '?')[0].toUpperCase()}</div>
-                        <span className="inc-tr-user">{al.username || '—'}</span>
-                      </div>
-                      <div className="inc-tr-tags">
-                        <span className={`inc-sev-tag ${isCritical ? 'sev-crit' : 'sev-med'}`}>
-                          {isCritical ? 'CRITICAL' : 'MEDIUM'}
-                        </span>
-                        <span className={`inc-type-tag ${al.alert_type === 'SUCCESS_AFTER_FAILURES' ? 'type-anom' : ''}`}>
-                          {typeLabel} {al.failure_count > 0 ? `×${al.failure_count}` : ''}
-                        </span>
-                      </div>
-                      <div className="inc-tr-actions">
-                        <motion.button className="inc-ab ab-ack" whileTap={{ scale: 0.95 }} transition={springs.snappy}>Acknowledge</motion.button>
-                        <motion.button className="inc-ab ab-blk" whileTap={{ scale: 0.95 }} transition={springs.snappy}>Block IP</motion.button>
-                        {al.alert_type === 'SUCCESS_AFTER_FAILURES' && (
-                          <motion.button className="inc-ab ab-inv" whileTap={{ scale: 0.95 }} transition={springs.snappy}>Investigate</motion.button>
-                        )}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            )}
-          </div>
-        </motion.div>
+function LiveTelemetrySection({ events, alerts }) {
+  const { selectedDate, isToday, resetToToday, displayDate } = useDateFilter();
+  const motionPrefs = useMotionPrefs();
+  const fadeUpVariant = motionPrefs.fadeUp || variants.fadeUp;
+  
+  const filteredEvents = filterByDate(events, selectedDate);
+  const filteredAlerts = filterByDate(alerts, selectedDate);
 
-        {/* Col 3: Deep Drill-Down */}
-        <motion.div
-          className="inc-panel"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springs.soft, delay: 0.14 }}
-        >
-          <div className="inc-panel-hdr" style={{ justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Icon name="alert-triangle" size={13} />
-              <span className="inc-panel-title">Deep Drill-Down</span>
-            </div>
-            {drillAlert && (
-              <motion.button
-                className="inc-dd-close"
-                onClick={() => setSelectedIncident(null)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                transition={springs.snappy}
-              >✕</motion.button>
-            )}
+  return (
+    <motion.div
+      className="section"
+      variants={fadeUpVariant}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      <div className="section-header">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h2>Incidents</h2>
           </div>
-
-          <div className="inc-panel-body">
-            {!drillAlert ? (
-              <div className="empty-state"><p>Select an incident to drill down</p></div>
-            ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            {!isToday && (
               <motion.div
-                key={drillAlert.id}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={springs.soft}
+                className="viewing-past-date-pill"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={springs.snappy}
               >
-                {/* Metadata */}
-                <div className="inc-dd-section">
-                  <div className="inc-dd-label">Metadata</div>
-                  <div className="inc-dd-meta">{fmtDateTime(drillAlert.triggered_at)}</div>
-                </div>
-
-                {/* Info rows */}
-                <div className="inc-dd-section">
-                  <div className="inc-dd-row"><span>User</span><span className="inc-dd-val-accent">{drillAlert.username || '—'}</span></div>
-                  <div className="inc-dd-row"><span>Source IP</span><span className="inc-dd-val-mono">{drillAlert.source_ip || '—'}</span></div>
-                  <div className="inc-dd-row"><span>Type</span><span className="inc-dd-val-err">{alertTypeLabel(drillAlert.alert_type)}</span></div>
-                  {drillAlert.failure_count > 0 && (
-                    <div className="inc-dd-row"><span>Occurrences</span><span className="inc-dd-val-err">×{drillAlert.failure_count}</span></div>
-                  )}
-                </div>
-
-                {/* Timeline Events */}
-                <div className="inc-dd-section">
-                  <div className="inc-dd-label">Timeline Events</div>
-                  <div className="inc-dd-tl">
-                    {drillEvents.length === 0 ? (
-                      <p style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>No events found</p>
-                    ) : (
-                      drillEvents.map((ev, i) => (
-                        <div key={ev.id || i} className="inc-dd-tl-row">
-                          <span className="inc-dd-tl-dot" style={{ background: ev.status === 'SUCCESS' ? '#10b981' : '#ef4444' }} />
-                          <span className="inc-dd-tl-time">{fmtTime(ev.timestamp)}</span>
-                          <span className={`inc-dd-tl-status ${ev.status === 'SUCCESS' ? 'tl-ok' : 'tl-fail'}`}>
-                            ● {ev.status === 'SUCCESS' ? 'Success' : 'Failed'}
-                          </span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="inc-dd-actions">
-                  <motion.button className="inc-dd-btn dab-fp" whileTap={{ scale: 0.97 }} transition={springs.snappy}>
-                    Mark False Positive
-                  </motion.button>
-                  <motion.button className="inc-dd-btn dab-mute" whileTap={{ scale: 0.97 }} transition={springs.snappy}>
-                    Mute Alerts
-                  </motion.button>
-                  <motion.button className="inc-dd-btn dab-blk" whileTap={{ scale: 0.97 }} transition={springs.snappy}>
-                    Block IP Address
-                  </motion.button>
-                </div>
+                <span>Viewing {displayDate}</span>
+                <button type="button" className="btn-back-to-live" onClick={resetToToday}>
+                  Back to live
+                </button>
               </motion.div>
             )}
+            <ExportAnalysisDropdown alerts={filteredAlerts.length > 0 ? filteredAlerts : alerts} />
           </div>
-        </motion.div>
+        </div>
+      </div>
 
-      </div>{/* /inc-three-col */}
+      <div className="telemetry-grid">
+        <motion.div
+          className="telemetry-panel"
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={springs.soft}
+          viewport={{ once: true, margin: '-40px' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h3 style={{ margin: 0 }}>Authentication Events</h3>
+            <span className="badge">{filteredEvents.length}</span>
+          </div>
+          <EventsTable events={filteredEvents} emptyMessage={`No events on ${displayDate}`} />
+        </motion.div>
+        <motion.div
+          className="telemetry-panel"
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={springs.soft}
+          viewport={{ once: true, margin: '-40px' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h3 style={{ margin: 0 }}>Detected Incidents</h3>
+            <span className="badge alert">{filteredAlerts.length}</span>
+          </div>
+          <AlertList alerts={filteredAlerts} emptyMessage={`No incidents on ${displayDate}`} />
+        </motion.div>
+      </div>
     </motion.div>
   );
 }

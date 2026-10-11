@@ -1,25 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { springs } from '../motion';
 import {
   exportIncidentAnalysisCsv,
   exportIncidentAnalysisJson,
   exportIncidentAnalysisPdf,
 } from '../utils/exportIncidentAnalysis';
 
-const FORMATS = [
-  { id: 'csv', label: 'Export as CSV', sub: 'Table & summary headers', icon: 'CSV', bg: '#ecfdf5', color: '#059669' },
-  { id: 'json', label: 'Export as JSON', sub: 'Structured audit payload', icon: 'JSON', bg: '#eff6ff', color: '#2563eb' },
-  { id: 'pdf', label: 'Export as PDF', sub: 'Official incident audit report', icon: 'PDF', bg: '#fee2e2', color: '#dc2626' },
-];
-
 export default function ExportAnalysisDropdown({ alerts = [] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
-  const [statusType, setStatusType] = useState('success');
+  const [statusType, setStatusType] = useState('success'); // 'success' | 'error' | 'info'
   const dropdownRef = useRef(null);
   const toastTimeoutRef = useRef(null);
 
+  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -37,15 +30,19 @@ export default function ExportAnalysisDropdown({ alerts = [] }) {
     setStatusMessage(msg);
     setStatusType(type);
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    toastTimeoutRef.current = setTimeout(() => setStatusMessage(null), 4000);
+    toastTimeoutRef.current = setTimeout(() => {
+      setStatusMessage(null);
+    }, 4000);
   };
 
   const handleExport = (format) => {
     setIsOpen(false);
+
     if (!alerts || alerts.length === 0) {
       showFeedback('No incident data available to export in current view.', 'error');
       return;
     }
+
     try {
       if (format === 'csv') {
         exportIncidentAnalysisCsv(alerts);
@@ -55,7 +52,7 @@ export default function ExportAnalysisDropdown({ alerts = [] }) {
         showFeedback(`Exported ${alerts.length} incidents to TAVIX_GUARD_Incident_Analysis.json`, 'success');
       } else if (format === 'pdf') {
         exportIncidentAnalysisPdf(alerts);
-        showFeedback('Generated TAVIX_GUARD_Incident_Analysis.pdf report successfully', 'success');
+        showFeedback(`Generated TAVIX_GUARD_Incident_Analysis.pdf report successfully`, 'success');
       }
     } catch (err) {
       console.error('Export error:', err);
@@ -65,113 +62,269 @@ export default function ExportAnalysisDropdown({ alerts = [] }) {
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
-      <motion.button
+      {/* Export Analysis Button */}
+      <button
         type="button"
         id="btn-export-analysis"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-haspopup="true"
         title="Export incident analysis data and report"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.96 }}
-        transition={springs.snappy}
         style={{
-          display: 'inline-flex', alignItems: 'center', gap: '8px',
-          padding: '8px 16px', fontSize: '13px', fontWeight: 600,
-          background: 'var(--accent)', color: '#ffffff', border: 'none',
-          borderRadius: 'var(--radius-md)', cursor: 'pointer',
-          boxShadow: '0 2px 6px rgba(0,102,255,0.22)', userSelect: 'none',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '8px 16px',
+          fontSize: '13px',
+          fontWeight: 600,
+          background: 'var(--accent)',
+          color: '#ffffff',
+          border: 'none',
+          borderRadius: 'var(--radius-md)',
+          cursor: 'pointer',
+          boxShadow: '0 2px 6px rgba(0, 102, 255, 0.22)',
+          transition: 'all var(--transition-fast, 0.15s ease)',
+          userSelect: 'none',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'var(--accent-hover)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'var(--accent)';
+          e.currentTarget.style.transform = 'none';
         }}
       >
+        {/* Export / Download Icon */}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" style={{ flexShrink: 0 }}>
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
           <polyline points="7 10 12 15 17 10" />
           <line x1="12" y1="15" x2="12" y2="3" />
         </svg>
+
         <span>Export Analysis</span>
-        <motion.svg
-          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={springs.snappy}
-          style={{ marginLeft: '2px' }}
+
+        {/* Dropdown Chevron */}
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          style={{
+            marginLeft: '2px',
+            transform: isOpen ? 'rotate(180deg)' : 'none',
+            transition: 'transform 0.2s ease',
+          }}
         >
           <polyline points="6 9 12 15 18 9" />
-        </motion.svg>
-      </motion.button>
+        </svg>
+      </button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            role="menu"
-            initial={{ opacity: 0, scale: 0.95, y: -6 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -6 }}
-            transition={springs.sheet}
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div
+          role="menu"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            right: 0,
+            width: '230px',
+            background: 'var(--bg-card, #ffffff)',
+            border: '1px solid var(--border-light, #e5e7eb)',
+            borderRadius: 'var(--radius-lg, 12px)',
+            boxShadow: 'var(--ios-shadow-popover, 0 16px 36px -6px rgba(0, 0, 0, 0.15))',
+            zIndex: 1000,
+            padding: '6px',
+            animation: 'iosDropdownEntrance var(--ios-duration-normal, 0.22s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1))',
+            transformOrigin: 'top right',
+            backdropFilter: 'blur(16px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+          }}
+        >
+          <div
             style={{
-              position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-              width: '230px', background: 'var(--bg-card, #ffffff)',
-              border: '1px solid var(--border-light)', borderRadius: 'var(--radius-lg, 12px)',
-              boxShadow: 'var(--ios-shadow-popover)', zIndex: 1000, padding: '6px',
-              transformOrigin: 'top right',
-              backdropFilter: 'blur(16px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+              padding: '6px 10px 4px 10px',
+              fontSize: '10px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              color: 'var(--text-tertiary, #9ca3af)',
+              borderBottom: '1px solid var(--border-light, #f3f4f6)',
+              marginBottom: '4px',
             }}
           >
-            <div style={{ padding: '6px 10px 4px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', borderBottom: '1px solid var(--border-light)', marginBottom: '4px' }}>
-              Export Format
-            </div>
-            {FORMATS.map((fmt) => (
-              <motion.button
-                key={fmt.id} type="button" role="menuitem"
-                onClick={() => handleExport(fmt.id)}
-                whileHover={{ backgroundColor: 'var(--bg-tertiary)', x: 2 }}
-                whileTap={{ scale: 0.98 }}
-                transition={springs.snappy}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '9px 12px', background: 'transparent', border: 'none',
-                  borderRadius: 'var(--radius-md, 8px)', cursor: 'pointer',
-                  textAlign: 'left', color: 'var(--text-primary)',
-                }}
-              >
-                <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: fmt.bg, color: fmt.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>
-                  {fmt.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600 }}>{fmt.label}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{fmt.sub}</div>
-                </div>
-              </motion.button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            Export Format
+          </div>
 
-      <AnimatePresence>
-        {statusMessage && (
-          <motion.div
-            role="status"
-            initial={{ opacity: 0, scale: 0.95, y: -6 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -6 }}
-            transition={springs.sheet}
+          {/* Option: CSV */}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleExport('csv')}
             style={{
-              position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-              whiteSpace: 'nowrap', padding: '8px 14px', fontSize: '12px', fontWeight: 500,
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '9px 12px',
+              background: 'transparent',
+              border: 'none',
               borderRadius: 'var(--radius-md, 8px)',
-              background: statusType === 'error' ? '#fef2f2' : '#ecfdf5',
-              color: statusType === 'error' ? '#b91c1c' : '#047857',
-              border: `1px solid ${statusType === 'error' ? '#fecaca' : '#a7f3d0'}`,
-              boxShadow: 'var(--ios-shadow-card)', zIndex: 1001,
-              display: 'flex', alignItems: 'center', gap: '8px',
-              backdropFilter: 'blur(12px)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'background 0.15s ease',
+              color: 'var(--text-primary, #1f2937)',
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-tertiary, #f3f4f6)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
-            <span>{statusType === 'error' ? '⚠️' : '✓'}</span>
-            <span>{statusMessage}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <div
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '6px',
+                background: '#ecfdf5',
+                color: '#059669',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '11px',
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              CSV
+            </div>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600 }}>Export as CSV</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary, #9ca3af)' }}>Table & summary headers</div>
+            </div>
+          </button>
+
+          {/* Option: JSON */}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleExport('json')}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '9px 12px',
+              background: 'transparent',
+              border: 'none',
+              borderRadius: 'var(--radius-md, 8px)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'background 0.15s ease',
+              color: 'var(--text-primary, #1f2937)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-tertiary, #f3f4f6)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <div
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '6px',
+                background: '#eff6ff',
+                color: '#2563eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '10px',
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              JSON
+            </div>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600 }}>Export as JSON</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary, #9ca3af)' }}>Structured audit payload</div>
+            </div>
+          </button>
+
+          {/* Option: PDF */}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleExport('pdf')}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '9px 12px',
+              background: 'transparent',
+              border: 'none',
+              borderRadius: 'var(--radius-md, 8px)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'background 0.15s ease',
+              color: 'var(--text-primary, #1f2937)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-tertiary, #f3f4f6)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <div
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '6px',
+                background: '#fee2e2',
+                color: '#dc2626',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '10px',
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              PDF
+            </div>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600 }}>Export as PDF</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary, #9ca3af)' }}>Official incident audit report</div>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* Floating Status Toast Notification */}
+      {statusMessage && (
+        <div
+          role="status"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            right: 0,
+            whiteSpace: 'nowrap',
+            padding: '8px 14px',
+            fontSize: '12px',
+            fontWeight: 500,
+            borderRadius: 'var(--radius-md, 8px)',
+            background: statusType === 'error' ? '#fef2f2' : '#ecfdf5',
+            color: statusType === 'error' ? '#b91c1c' : '#047857',
+            border: `1px solid ${statusType === 'error' ? '#fecaca' : '#a7f3d0'}`,
+            boxShadow: 'var(--ios-shadow-card, 0 4px 16px -2px rgba(0, 0, 0, 0.08))',
+            zIndex: 1001,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'iosToastSlideIn var(--ios-duration-normal, 0.26s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1))',
+            transformOrigin: 'top right',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <span>{statusType === 'error' ? '⚠️' : '✓'}</span>
+          <span>{statusMessage}</span>
+        </div>
+      )}
     </div>
   );
 }
