@@ -552,7 +552,7 @@ function LiveTelemetrySection({ events, alerts }) {
 }
 
 // ── Settings Section ────────────────────────────────────────────────────────
-function SettingsSection({ health }) {
+function SettingsSection({ health, onLogout }) {
   const motionPrefs = useMotionPrefs();
   const fadeUpVariant = motionPrefs.fadeUp || variants.fadeUp;
   
@@ -616,6 +616,39 @@ function SettingsSection({ health }) {
               <span className="info-value">{Math.round((health.uptime_seconds || 0) / 60)} minutes</span>
             </div>
           )}
+        </div>
+      </motion.div>
+
+      <motion.div
+        className="settings-card"
+        initial={{ opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={springs.soft}
+        viewport={{ once: true, margin: '-40px' }}
+      >
+        <h3>Account</h3>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '12px' }}>
+          <motion.button
+            onClick={onLogout}
+            style={{
+              padding: '10px 20px',
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.96 }}
+            transition={springs.snappy}
+          >
+            Logout
+          </motion.button>
+          <span style={{ fontSize: '13px', color: '#666' }}>
+            Click to logout from this account
+          </span>
         </div>
       </motion.div>
     </motion.div>
@@ -842,7 +875,7 @@ export default function Dashboard({ user, onLogout }) {
                 />
               )}
               {activeMenu === 'csv' && <CsvAnalyticsPage />}
-              {activeMenu === 'settings' && <SettingsSection health={health} />}
+              {activeMenu === 'settings' && <SettingsSection health={health} onLogout={handleLogout} />}
             </PageTransition>
           </div>
         </div>
