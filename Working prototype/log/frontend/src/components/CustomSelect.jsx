@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { springs } from '../motion';
 import './CustomSelect.css';
 
 /**
@@ -56,7 +58,7 @@ export default function CustomSelect({
           {...props}
         >
           <span className="custom-select-value">{displayLabel}</span>
-          <svg
+          <motion.svg
             className="custom-select-chevron"
             width="16"
             height="16"
@@ -64,18 +66,25 @@ export default function CustomSelect({
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
-            style={{
-              transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease',
-            }}
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={springs.snappy}
           >
             <polyline points="6 9 12 15 18 9" />
-          </svg>
+          </motion.svg>
         </button>
 
         {/* Dropdown Menu */}
-        {isOpen && !disabled && (
-          <div className="custom-select-menu" role="listbox">
+        <AnimatePresence>
+          {isOpen && !disabled && (
+            <motion.div
+              className="custom-select-menu"
+              role="listbox"
+              initial={{ opacity: 0, scaleY: 0.9, y: -4 }}
+              animate={{ opacity: 1, scaleY: 1, y: 0 }}
+              exit={{ opacity: 0, scaleY: 0.9, y: -4 }}
+              transition={springs.sheet}
+              style={{ transformOrigin: 'top center' }}
+            >
             {/* Options Header */}
             {options.length > 0 && (
               <div className="custom-select-header">
@@ -90,7 +99,7 @@ export default function CustomSelect({
               ) : (
                 options.map((option, index) => (
                   <button
-                    key={index}
+                    key={option.value}
                     type="button"
                     role="option"
                     className={`custom-select-option ${value === option.value ? 'selected' : ''}`}
@@ -116,8 +125,9 @@ export default function CustomSelect({
                 ))
               )}
             </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

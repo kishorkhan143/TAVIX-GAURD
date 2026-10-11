@@ -38,7 +38,10 @@
   border: 1px solid var(--border-normal, #d1d5db);
   border-radius: 8px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  /* explicit properties — no transition: all */
+  transition: border-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              box-shadow var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              background-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
   font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   position: relative;
   z-index: 10;
@@ -90,6 +93,7 @@
 }
 
 /* ── Dropdown Menu ─────────────────────────────────────────────────────────── */
+/* Dropdown menu — entrance/exit animation handled by motion/react AnimatePresence */
 .custom-select-menu {
   position: absolute;
   top: 100%;
@@ -106,7 +110,7 @@
   max-height: 320px;
   overflow-y: auto;
   overflow-x: hidden;
-  animation: iosDropdownEntrance var(--ios-duration-normal, 0.22s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1));
+  /* NO CSS animation here — motion handles open/close */
   transform-origin: top center;
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
@@ -150,7 +154,9 @@
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  /* explicit — no transition: all */
+  transition: background-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
   border-radius: 6px;
   font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   position: relative;
@@ -178,7 +184,9 @@
   border-radius: 50%;
   background: var(--border-normal, #d1d5db);
   flex-shrink: 0;
-  transition: all var(--transition-fast);
+  transition: background-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              width var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              height var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .custom-select-option:hover .option-dot {
