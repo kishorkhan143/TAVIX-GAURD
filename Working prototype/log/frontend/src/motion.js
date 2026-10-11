@@ -155,10 +155,12 @@ export const variants = {
   },
 
   // List item: individual row animation
+  // NOTE: never animate height on exit — it triggers layout thrashing.
+  // Use opacity + scale only; rows collapse naturally via layout prop.
   listItem: {
     hidden: {
       opacity: 0,
-      y: -12,
+      y: -10,
       scale: 0.98,
     },
     visible: {
@@ -171,9 +173,9 @@ export const variants = {
     },
     exit: {
       opacity: 0,
-      height: 0,
+      scale: 0.96,
       transition: {
-        duration: 0.2,
+        duration: 0.18,
         ease: appleEase,
       },
     },

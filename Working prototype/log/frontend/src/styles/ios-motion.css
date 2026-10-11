@@ -1,27 +1,24 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    TAVIX GUARD — Premium iOS Motion Design System
-   Buttery smooth, native-feeling, hardware-accelerated animations & transitions
+   Tokens, easing curves, and CSS-only interactions.
+   All entrance/exit animations are handled by motion/react — no double-animation.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
   /* ── iOS Physics & Timing Curves ─────────────────────────────────────── */
-  /* Apple snappy deceleration: rapid start, silky gentle landing */
   --ios-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  /* Apple spring: lively but refined responsiveness without exaggerated wobble */
   --ios-spring: cubic-bezier(0.175, 0.885, 0.32, 1.15);
-  /* Apple fluid spring: smooth organic velocity */
   --ios-spring-soft: cubic-bezier(0.16, 1, 0.3, 1);
-  /* Apple standard ease in out */
   --ios-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ── iOS Motion Timing Scale ─────────────────────────────────────────── */
-  --ios-duration-micro: 130ms;    /* Icon toggles, checkboxes, badge updates */
-  --ios-duration-fast: 180ms;     /* Button taps, pills, micro-interactions */
-  --ios-duration-base: 180ms;     /* Alias for --ios-duration-fast (backward compat) */
-  --ios-duration-normal: 260ms;   /* Dropdowns, popovers, tabs, input focus */
-  --ios-duration-smooth: 340ms;   /* Cards, panels, modal dialogs, drawer */
-  --ios-duration-page: 300ms;     /* Full view / section transitions */
-  --ios-duration-skeleton: 1500ms;/* Shimmer loop */
+  --ios-duration-micro: 130ms;
+  --ios-duration-fast: 180ms;
+  --ios-duration-base: 180ms;
+  --ios-duration-normal: 260ms;
+  --ios-duration-smooth: 340ms;
+  --ios-duration-page: 300ms;
+  --ios-duration-skeleton: 1500ms;
 
   /* ── iOS Elevated Shadows ───────────────────────────────────────────── */
   --ios-shadow-subtle: 0 2px 6px -1px rgba(0, 0, 0, 0.05), 0 1px 3px -1px rgba(0, 0, 0, 0.03);
@@ -31,230 +28,59 @@
   --ios-shadow-modal: 0 24px 60px -12px rgba(0, 0, 0, 0.25), 0 8px 24px -4px rgba(0, 0, 0, 0.1);
 }
 
-/* ── 1. Smooth Native Scrolling ────────────────────────────────────────── */
+/* ── 1. Smooth Native Scrolling — only on html, NOT on * ──────────────── */
+/* Applying scroll-behavior: smooth to * causes jank in overflow containers */
 html {
   scroll-behavior: smooth;
 }
 
-/* Smooth container scrollbars */
-* {
-  scroll-behavior: smooth;
-}
-
-/* ── 2. iOS Native Active Tap / Press Scale Feedback ───────────────────── */
-/* Gives physical tactile resistance and feedback on touch or click */
+/* ── 2. iOS Tap Feedback — CSS transitions only, no conflicting transforms ── */
+/* motion/react handles scale/translate on whileTap/whileHover.              */
+/* Here we only set up the non-transform properties and hardware acceleration. */
 button:not(:disabled),
 .btn-primary:not(:disabled),
 .btn-secondary:not(:disabled),
 .nav-item,
 .admin-btn,
 .date-filter-pill,
-.stat-card,
 .tab-btn,
 .view-btn,
 .custom-select-button:not(:disabled),
 .modal-close-btn,
 .btn-back-to-live {
   -webkit-tap-highlight-color: transparent;
+  /* GPU layer for the elements motion will animate */
   transform: translateZ(0);
   backface-visibility: hidden;
-  will-change: transform;
-  transition: transform var(--ios-duration-fast) var(--ios-ease),
-              background-color var(--ios-duration-fast) var(--ios-ease),
+  transition: background-color var(--ios-duration-fast) var(--ios-ease),
               border-color var(--ios-duration-fast) var(--ios-ease),
-              box-shadow var(--ios-duration-fast) var(--ios-ease),
               color var(--ios-duration-fast) var(--ios-ease),
               opacity var(--ios-duration-fast) var(--ios-ease);
+  /* do NOT include transform or box-shadow here — motion handles those */
 }
 
-button:active:not(:disabled),
-.btn-primary:active:not(:disabled),
-.btn-secondary:active:not(:disabled),
-.nav-item:active,
-.admin-btn:active,
-.date-filter-pill:active,
-.stat-card:active,
-.tab-btn:active,
-.view-btn:active,
-.custom-select-button:active:not(:disabled),
-.modal-close-btn:active,
-.btn-back-to-live:active {
-  transform: scale(0.972);
-}
-
-/* Smaller tactile press for tight icons / close buttons */
-.modal-close-btn:active {
-  transform: scale(0.9) rotate(90deg);
-}
-
-/* ── 3. Page & View Transitions ────────────────────────────────────────── */
+/* ── 3. Page container — NO CSS animation; motion handles entrance/exit ── */
 .ios-page-container {
   width: 100%;
-  animation: iosPageEntrance var(--ios-duration-page) var(--ios-spring-soft) forwards;
-  will-change: transform, opacity;
+  /* will-change is set only when motion is actively animating */
 }
 
-@keyframes iosPageEntrance {
-  0% {
-    opacity: 0;
-    transform: translateY(10px) scale(0.994);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Subtle view transition for tabs */
-.ios-tab-content-enter {
-  animation: iosTabFadeIn var(--ios-duration-normal) var(--ios-ease) forwards;
-  will-change: opacity, transform;
-}
-
-@keyframes iosTabFadeIn {
-  0% {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ── 4. Keyframes for iOS Elements ─────────────────────────────────────── */
-@keyframes iosFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes iosFadeInUp {
-  0% {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes iosScaleIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes iosModalEntrance {
-  0% {
-    opacity: 0;
-    transform: scale(0.92) translateY(16px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes iosBackdropBlur {
-  0% {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
-  }
-  100% {
-    opacity: 1;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-  }
-}
-
-@keyframes iosDropdownEntrance {
-  0% {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.96);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes iosToastSlideIn {
-  0% {
-    opacity: 0;
-    transform: translateY(-12px) scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes iosPulseSubtle {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.08);
-    opacity: 0.85;
-  }
-}
-
-@keyframes iosShimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-/* ── 5. Staggered Reveals (Entrance Delays) ────────────────────────────── */
+/* ── 4. Staggered Delays (used only on elements not already managed by motion) ── */
 .ios-stagger-1 { animation-delay: 30ms !important; }
 .ios-stagger-2 { animation-delay: 60ms !important; }
 .ios-stagger-3 { animation-delay: 90ms !important; }
 .ios-stagger-4 { animation-delay: 120ms !important; }
 .ios-stagger-5 { animation-delay: 150ms !important; }
 .ios-stagger-6 { animation-delay: 180ms !important; }
-.ios-stagger-7 { animation-delay: 210ms !important; }
-.ios-stagger-8 { animation-delay: 240ms !important; }
-.ios-stagger-9 { animation-delay: 270ms !important; }
-.ios-stagger-10 { animation-delay: 300ms !important; }
 
-/* ── 6. Scroll Reveal System ───────────────────────────────────────────── */
-.ios-reveal {
-  opacity: 0;
-  transform: translateY(14px);
-  transition: opacity var(--ios-duration-smooth) var(--ios-ease),
-              transform var(--ios-duration-smooth) var(--ios-spring-soft);
-  will-change: opacity, transform;
-}
-
-.ios-reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* ── 7. Cards & Panels Refinement ──────────────────────────────────────── */
+/* ── 5. Cards & Panels — only non-transform CSS properties ─────────────── */
+/* motion/react handles translateY on whileHover for stat-card             */
 .stat-card {
   position: relative;
   overflow: hidden;
-  transition: transform var(--ios-duration-normal) var(--ios-spring-soft),
-              box-shadow var(--ios-duration-normal) var(--ios-ease),
+  transition: box-shadow var(--ios-duration-normal) var(--ios-ease),
               border-color var(--ios-duration-normal) var(--ios-ease),
               background-color var(--ios-duration-normal) var(--ios-ease);
-}
-
-.stat-card:hover {
-  transform: translateY(-4px) scale(1.008);
-  box-shadow: var(--ios-shadow-card-hover);
 }
 
 .stat-card .stat-icon {
@@ -280,37 +106,23 @@ button:active:not(:disabled),
   box-shadow: var(--ios-shadow-card);
 }
 
-/* ── 8. Table & List Rows Fluid Hover ──────────────────────────────────── */
+/* ── 6. Table & List Row Hover — NO transform (motion handles layout) ───── */
 .event-row,
 .alert-row,
 .data-table tbody tr {
   position: relative;
-  transition: background-color var(--ios-duration-fast) var(--ios-ease),
-              transform var(--ios-duration-fast) var(--ios-ease),
-              box-shadow var(--ios-duration-fast) var(--ios-ease);
+  /* Only background-color transition; transform is owned by motion layout  */
+  transition: background-color var(--ios-duration-fast) var(--ios-ease);
 }
 
-.event-row:hover,
-.alert-row:hover,
-.data-table tbody tr:hover {
-  background-color: var(--bg-tertiary) !important;
-  transform: translateX(4px);
-}
-
-.event-row:active,
-.alert-row:active,
-.data-table tbody tr:active {
-  transform: scale(0.995);
-}
-
-/* ── 9. Modals & Overlays (iOS Sheet / Dialog Feel) ─────────────────────── */
+/* ── 7. Modals & Overlays — NO CSS animation; motion handles entrance/exit  */
 .modal-backdrop {
-  animation: iosBackdropBlur var(--ios-duration-normal) var(--ios-ease) forwards;
   background: rgba(15, 23, 42, 0.42) !important;
+  /* opacity is handled by motion backdropFade variant */
 }
 
 .modal-dialog {
-  animation: iosModalEntrance var(--ios-duration-smooth) var(--ios-spring-soft) forwards !important;
+  /* NO animation here; motion sheet spring handles it */
   transform-origin: center center;
   box-shadow: var(--ios-shadow-modal) !important;
 }
@@ -323,14 +135,13 @@ button:active:not(:disabled),
 
 .modal-close-btn:hover {
   transform: rotate(90deg) scale(1.1);
-  color: var(--text-primary);
 }
 
-/* ── 10. Dropdowns, Menus & Action Sheets ──────────────────────────────── */
+/* ── 8. Dropdowns — NO CSS animation; motion handles entrance/exit ──────── */
 .custom-select-menu,
 .export-dropdown-menu,
 .dropdown-menu {
-  animation: iosDropdownEntrance var(--ios-duration-normal) var(--ios-spring-soft) forwards !important;
+  /* NO animation here; motion handles it */
   transform-origin: top center;
   box-shadow: var(--ios-shadow-popover) !important;
   backdrop-filter: blur(12px) saturate(180%);
@@ -349,7 +160,7 @@ button:active:not(:disabled),
   transform: translateX(3px);
 }
 
-/* ── 11. Form Inputs & Interactive Controls ───────────────────────────── */
+/* ── 9. Form Inputs ─────────────────────────────────────────────────────── */
 input[type="text"],
 input[type="date"],
 input[type="search"],
@@ -357,8 +168,8 @@ textarea,
 select {
   transition: border-color var(--ios-duration-fast) var(--ios-ease),
               box-shadow var(--ios-duration-fast) var(--ios-ease),
-              background-color var(--ios-duration-fast) var(--ios-ease),
-              transform var(--ios-duration-fast) var(--ios-ease);
+              background-color var(--ios-duration-fast) var(--ios-ease);
+  /* No transform — avoids layout shifts on focus */
 }
 
 input[type="text"]:focus,
@@ -369,21 +180,9 @@ select:focus {
   outline: none;
   border-color: var(--accent) !important;
   box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.18) !important;
-  transform: translateY(-1px);
 }
 
-/* Search input with smooth clear icon */
-.search-input-wrapper {
-  transition: transform var(--ios-duration-fast) var(--ios-ease);
-}
-
-/* ── 12. Badges, Indicators & Micro Pulse ──────────────────────────────── */
-.status-badge.online .dot,
-.live-pulse-dot {
-  display: inline-block !important;
-  animation: iosPulseSubtle 2.2s infinite ease-in-out;
-}
-
+/* ── 10. Badges ─────────────────────────────────────────────────────────── */
 .badge {
   transition: transform var(--ios-duration-micro) var(--ios-spring),
               background-color var(--ios-duration-fast) var(--ios-ease);
@@ -393,7 +192,12 @@ select:focus {
   transform: scale(1.08);
 }
 
-/* ── 13. Skeleton & Loading States ─────────────────────────────────────── */
+/* ── 11. Skeleton & Loading States ─────────────────────────────────────── */
+@keyframes iosShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
 .ios-skeleton {
   background: linear-gradient(
     90deg,
@@ -402,11 +206,11 @@ select:focus {
     rgba(229, 231, 235, 0.7) 100%
   );
   background-size: 200% 100%;
-  animation: iosShimmer var(--ios-skeleton) infinite linear;
+  animation: iosShimmer var(--ios-duration-skeleton) infinite linear;
   border-radius: var(--radius-md);
 }
 
-/* ── 14. Accessible Reduced Motion Override ────────────────────────────── */
+/* ── 12. Accessible Reduced Motion ──────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -415,20 +219,5 @@ select:focus {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-
-  .ios-page-container,
-  .ios-tab-content-enter,
-  .modal-dialog,
-  .custom-select-menu,
-  .export-dropdown-menu {
-    transform: none !important;
-    animation: none !important;
-    opacity: 1 !important;
-  }
-
-  button:active,
-  .stat-card:active {
-    transform: none !important;
   }
 }

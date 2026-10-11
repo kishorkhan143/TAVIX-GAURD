@@ -6,19 +6,56 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   ReferenceLine,
   Area,
   AreaChart,
 } from 'recharts';
 import { parseUtc } from '../useAuthSentinel';
+
+// AnimatedTooltip MUST be a stable named component at module level.
+// Defining it inside render (or useCallback) causes Recharts to see a new
+// component type on every render, which remounts the tooltip and causes flicker.
+function AnimatedTooltip({ active, payload, label }) {
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    try {
+      const date = parseUtc(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
+
+  if (!active || !payload?.length) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96, y: -4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
+      style={{
+        backgroundColor: '#fff',
+        border: '1px solid #e5e7eb',
+        borderRadius: '0.5rem',
+        padding: '8px 12px',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+        fontSize: '13px',
+        pointerEvents: 'none',
+      }}
+    >
+      <p style={{ margin: 0, color: '#6b7280', marginBottom: 4 }}>{formatTime(label)}</p>
+      {payload.map((entry) => (
+        <p key={entry.name} style={{ margin: '2px 0', fontWeight: 600, color: entry.color }}>
+          {typeof entry.value === 'number' ? `${entry.value.toFixed(1)}` : entry.value}
+        </p>
+      ))}
+    </motion.div>
+  );
+}
 
 export default function RiskChart({ 
   data = [],
@@ -28,38 +65,16 @@ export default function RiskChart({
 }) {
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
-    const date = parseUtc(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+      const date = parseUtc(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
   };
 
-  // Memoize data for better performance
+  // Memoize data so the chart doesn't re-animate on unrelated parent renders
   const chartData = React.useMemo(() => data, [data]);
-
-  const AnimatedTooltip = React.useCallback(({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    return (
-      <motion.div
-        initial={{opacity: 0, scale: 0.96}}
-        animate={{opacity: 1, scale: 1}}
-        transition={{duration: 0.15, ease: [0.22, 1, 0.36, 1]}}
-        style={{
-          backgroundColor: '#fff',
-          border: '1px solid #e5e7eb',
-          borderRadius: '0.5rem',
-          padding: '8px 12px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          fontSize: '13px',
-        }}
-      >
-        <p style={{margin: 0, color: '#6b7280'}}>{`Time: ${formatTime(label)}`}</p>
-        {payload.map((entry) => (
-          <p key={entry.name} style={{margin: '2px 0', fontWeight: 600, color: entry.color}}>
-            {typeof entry.value === 'number' ? `${entry.value.toFixed(1)}` : entry.value}
-          </p>
-        ))}
-      </motion.div>
-    );
-  }, []);
 
   if (!data || data.length === 0) {
     return (

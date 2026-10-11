@@ -141,22 +141,22 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  transition: all var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  /* motion handles transform; CSS handles only color/background */
+  transition: background-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
   font-family: var(--font-sans);
+  position: relative;
 }
 
 .nav-item:hover {
   background: var(--bg-tertiary);
   color: var(--text-primary);
-  transform: translateX(3px);
-}
-
-.nav-item:active {
-  transform: scale(0.975);
+  /* NO transform here — motion whileHover handles x:2 */
 }
 
 .nav-item.active {
-  background: var(--accent-light);
+  /* background is handled by the layoutId pill (.nav-active-pill) */
+  background: transparent;
   color: var(--accent);
   font-weight: 600;
 }
@@ -188,6 +188,23 @@
   text-align: left;
 }
 
+/* Active pill — positioned absolutely behind nav item content, animated by layoutId */
+.nav-active-pill {
+  position: absolute;
+  inset: 0;
+  background: var(--accent-light);
+  border-radius: var(--radius-md);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Ensure nav item content sits above the pill */
+.nav-item .nav-icon,
+.nav-item .nav-label {
+  position: relative;
+  z-index: 1;
+}
+
 .sidebar-footer {
   padding: 12px 8px;
   border-top: 1px solid var(--border-light);
@@ -206,15 +223,18 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  transition: all var(--transition-base);
+  /* motion handles transform; CSS handles non-transform properties only */
+  transition: background-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              border-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              box-shadow var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
   font-family: var(--font-sans);
 }
 
 .admin-btn:hover {
   background: var(--bg-tertiary);
   border-color: var(--border-normal);
-  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* NO transform here — motion whileHover handles it */
 }
 
 .admin-icon {
@@ -295,7 +315,9 @@
   border: 1px solid var(--border-light);
   border-radius: var(--radius-full, 999px);
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: background-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              border-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              box-shadow var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
   user-select: none;
 }
 
@@ -304,8 +326,8 @@
   background: var(--bg-tertiary);
   border-color: var(--border-normal);
   outline: none;
-  transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  /* NO transform — keeps pill stable */
 }
 
 .date-filter-icon {
@@ -343,13 +365,30 @@
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast, 0.15s);
+  transition: background-color var(--ios-duration-fast, 0.15s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              color var(--ios-duration-fast, 0.15s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
   font-family: var(--font-sans);
 }
 
 .date-filter-today-btn:hover {
   background: var(--accent);
   color: #ffffff;
+}
+
+.btn-back-to-live {
+  background: #f59e0b;
+  color: #ffffff;
+  border: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.btn-back-to-live:hover {
+  background: #d97706;
 }
 
 /* ── Date Input Styling ───────────────────────────────────────────── */
@@ -397,22 +436,6 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   border-radius: var(--radius-full, 999px);
   font-size: 12px;
   font-weight: 600;
-}
-
-.btn-back-to-live {
-  background: #f59e0b;
-  color: #ffffff;
-  border: none;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.btn-back-to-live:hover {
-  background: #d97706;
 }
 
 .event-date-sub {
@@ -475,15 +498,16 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
-  transition: all var(--transition-base);
-  /* Animation handled by motion/react */
+  transition: border-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              background-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+              box-shadow var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .status-badge:hover {
   border-color: var(--border-normal);
   background: var(--bg-tertiary);
-  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* NO transform — motion handles it if needed */
 }
 
 .status-badge.online {
@@ -500,15 +524,19 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  display: none;
+  /* FIXED: was display:none — dot must be visible for breathing glow */
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .status-badge.online .dot {
   background: var(--success);
+  /* breathing glow handled by motion animate in StatusBadge component */
 }
 
 .status-badge.offline .dot {
   background: var(--error);
+  /* offline dot is static — no animation */
 }
 
 .status-badge .count {
@@ -530,11 +558,10 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   background: var(--bg-secondary);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
-  transition: transform var(--ios-duration-normal, 0.26s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1)),
-              box-shadow var(--ios-duration-normal, 0.26s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+  /* motion handles transform on whileHover; CSS handles non-transform only */
+  transition: box-shadow var(--ios-duration-normal, 0.26s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1)),
               border-color var(--ios-duration-normal, 0.26s) var(--ios-ease),
               background-color var(--ios-duration-normal, 0.26s) var(--ios-ease);
-  /* Animation handled by motion/react */
   cursor: default;
   box-shadow: var(--ios-shadow-card);
   display: flex;
@@ -545,8 +572,8 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
 .stat-card:hover {
   border-color: var(--accent);
   background: var(--accent-faint);
-  transform: translateY(-4px) scale(1.008);
   box-shadow: var(--ios-shadow-card-hover);
+  /* NO transform here — motion whileHover handles y: -3 */
 }
 
 .stat-card.alert:hover {
@@ -664,7 +691,8 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   gap: 12px;
   align-items: center;
   font-size: 13px;
-  transition: all var(--transition-base);
+  /* Only background transition — motion layout handles the rest */
+  transition: background-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .alert-row {
@@ -677,13 +705,14 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   font-size: 13px;
   box-sizing: border-box;
   min-width: 500px;
-  transition: all var(--transition-base);
+  /* Only background transition — motion layout handles the rest */
+  transition: background-color var(--ios-duration-fast, 0.18s) var(--ios-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .event-row:hover,
 .alert-row:hover {
   background: var(--bg-tertiary);
-  transform: translateX(2px);
+  /* NO transform — rows are inside a motion layout container; CSS transform causes jank */
 }
 
 .event-row:last-child,
