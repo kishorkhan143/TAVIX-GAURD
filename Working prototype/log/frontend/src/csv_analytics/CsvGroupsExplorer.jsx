@@ -49,10 +49,12 @@ export default function CsvGroupsExplorer({ importId }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Control Toolbar */}
-      <div className="grouping-bar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div className="grouping-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+            Group By:
+          </span>
           <CustomSelect
-            label="Group By:"
             value={selectedDimension}
             onChange={(e) => setSelectedDimension(e.target.value)}
             options={DIMENSIONS.map((d) => ({
@@ -62,28 +64,51 @@ export default function CsvGroupsExplorer({ importId }) {
             style={{ minWidth: '140px' }}
           />
 
-          <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+          <span style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', marginLeft: '6px' }}>
             ({groups.length} distinct groups detected)
           </span>
         </div>
 
-        <div>
-          <input
-            type="text"
-            placeholder="Search group..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-light)',
-              fontSize: '12px',
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              width: '180px',
-              outline: 'none',
-            }}
-          />
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              style={{ position: 'absolute', left: '10px', color: 'var(--text-tertiary)', pointerEvents: 'none' }}
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search group..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                padding: '8px 12px 8px 32px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-light)',
+                fontSize: '12.5px',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                width: '200px',
+                outline: 'none',
+                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = 'var(--accent)';
+                e.target.style.boxShadow = '0 0 0 2px rgba(0, 102, 255, 0.12)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'var(--border-light)';
+                e.target.style.boxShadow = 'none';
+              }}
+            />
+          </div>
         </div>
       </div>
 

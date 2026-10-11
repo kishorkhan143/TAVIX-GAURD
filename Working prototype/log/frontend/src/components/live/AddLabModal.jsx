@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ModalPortal from '../ModalPortal';
 
 export default function AddLabModal({ onClose, onAddLab }) {
   const [name, setName] = useState('');
@@ -32,10 +33,11 @@ export default function AddLabModal({ onClose, onAddLab }) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-dialog" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+    <ModalPortal>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal-dialog" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
         <div className="modal-header">
-          <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700 }}>+ Add New Laboratory</h3>
+          <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700 }}>Add New Laboratory</h3>
           <button className="modal-close-btn" onClick={onClose}>
             ✕
           </button>
@@ -151,5 +153,6 @@ export default function AddLabModal({ onClose, onAddLab }) {
         </form>
       </div>
     </div>
-  );
+  </ModalPortal>
+);
 }

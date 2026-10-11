@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 
 /**
  * Sparkline component for statistic cards.
@@ -43,13 +44,17 @@ export default function Sparkline({
   const gradId = `sparkline-grad-${id}`;
 
   return (
-    <div
+    <motion.div
       className="sparkline-container"
+      initial={{ opacity: 0, scaleY: 0.85 }}
+      animate={{ opacity: 1, scaleY: 1 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
       style={{
         width: '100%',
         height: `${height}px`,
         overflow: 'hidden',
         pointerEvents: 'none',
+        transformOrigin: 'bottom center',
       }}
     >
       <svg
@@ -76,7 +81,7 @@ export default function Sparkline({
           vectorEffect="non-scaling-stroke"
         />
       </svg>
-    </div>
+    </motion.div>
   );
 }
 

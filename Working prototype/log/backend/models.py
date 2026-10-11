@@ -160,6 +160,8 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     email = Column(String(256), nullable=False, unique=True, index=True)
+    name = Column(String(256), nullable=True)
+    role = Column(String(32), default="admin")
     is_verified = Column(Boolean, default=False)
     verification_token = Column(String(512), nullable=True)
     verification_token_expires_at = Column(DateTime(timezone=True), nullable=True)
@@ -170,14 +172,32 @@ class User(Base):
         index=True,
     )
     verified_at = Column(DateTime(timezone=True), nullable=True)
-
-    __table_args__ = (
-        Index("ix_users_email", "email"),
-        Index("ix_users_verification_token", "verification_token"),
-    )
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
     updated_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
     )
+
+
+class RemoteCommand(Base):
+    """
+    Remote administrative actions queued for or executed on endpoints (e.g. Laptop A).
+    Actions: shutdown, lock_screen.
+    """
+    __tablename__ = "remote_commands"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    terminal_id = Column(String(256), nullable=False, index=True)
+    command = Column(String(64), nullable=False)   # "shutdown", "lock_screen", etc.
+    alert_id = Column(Integer, nullable=True, index=True)
+    status = Column(String(32), default="PENDING") # "PENDING", "SENT", "EXECUTED", "FAILED"
+    payload = Column(Text, nullable=True)          # JSON parameters / reason
+    result_message = Column(Text, nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+    executed_at = Column(DateTime(timezone=True), nullable=True)
+
 
 

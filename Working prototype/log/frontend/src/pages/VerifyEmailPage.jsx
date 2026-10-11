@@ -52,10 +52,10 @@ export default function VerifyEmailPage({ onVerified }) {
           onVerified(data.jwt_token);
         }
 
-        // Redirect to dashboard after 3 seconds
+        // Redirect to dashboard after 1.5 seconds
         const timer = setTimeout(() => {
-          navigate('/');
-        }, 3000);
+          navigate('/dashboard');
+        }, 1500);
 
         return () => clearTimeout(timer);
       } catch (err) {

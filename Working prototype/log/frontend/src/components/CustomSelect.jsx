@@ -85,13 +85,6 @@ export default function CustomSelect({
               transition={springs.sheet}
               style={{ transformOrigin: 'top center' }}
             >
-            {/* Options Header */}
-            {options.length > 0 && (
-              <div className="custom-select-header">
-                Available Options
-              </div>
-            )}
-
             {/* Options List */}
             <div className="custom-select-options">
               {options.length === 0 ? (

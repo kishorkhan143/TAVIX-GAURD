@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import CustomSelect from '../CustomSelect';
+import ModalPortal from '../ModalPortal';
 
 export default function AssignLabModal({ terminal, labs, onClose, onAssign }) {
   const [selectedLabId, setSelectedLabId] = useState(terminal?.lab_id || (labs.length > 0 ? labs[0].id : ''));
@@ -25,8 +26,9 @@ export default function AssignLabModal({ terminal, labs, onClose, onAssign }) {
   }));
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-dialog" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+    <ModalPortal>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal-dialog" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
         <div className="modal-header">
           <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
             Assign Terminal to Laboratory
@@ -78,5 +80,6 @@ export default function AssignLabModal({ terminal, labs, onClose, onAssign }) {
         </form>
       </div>
     </div>
-  );
+  </ModalPortal>
+);
 }

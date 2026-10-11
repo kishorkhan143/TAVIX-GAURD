@@ -28,12 +28,47 @@ class EventIngestionRequest(BaseModel):
     timestamp: datetime
     username: Optional[str] = None
     source_ip: Optional[str] = None
+    laptop_ip: Optional[str] = None          # Collected LAN IP from Laptop A
     source_host: Optional[str] = None
     target_computer: Optional[str] = None
     logon_type: Optional[int] = None
     logon_type_description: Optional[str] = None
     status: str                              # "SUCCESS" | "FAILURE"
     raw_record_id: Optional[int] = None
+
+
+class AlertActionRequest(BaseModel):
+    action: str                              # "shutdown" | "lock_screen" | "authorize"
+    note: Optional[str] = None
+    terminal_id: Optional[str] = None
+
+
+class CommandAckRequest(BaseModel):
+    status: str = "EXECUTED"                 # "EXECUTED" | "FAILED"
+    message: Optional[str] = None
+
+
+class RemoteCommandResponse(BaseModel):
+    id: int
+    terminal_id: str
+    command: str
+    alert_id: Optional[int] = None
+    status: str
+    payload: Optional[str] = None
+    result_message: Optional[str] = None
+    created_at: datetime
+    executed_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return _utc_timestamp(value)
+
+    @field_serializer("executed_at")
+    def serialize_executed_at(self, value: Optional[datetime]) -> Optional[str]:
+        return _utc_timestamp(value) if value else None
+
 
 
 # ── Outbound to Dashboard ─────────────────────────────────────────────────────
@@ -130,6 +165,18 @@ class LabCreateRequest(BaseModel):
     name: str
     description: Optional[str] = None
     location: Optional[str] = None
+
+
+class LabHoursRequest(BaseModel):
+    start_time: str
+    end_time: str
+
+
+class LabHoursResponse(BaseModel):
+    start_time: str
+    end_time: str
+    is_open: bool
+    status: str
 
 
 class LabResponse(BaseModel):
@@ -248,12 +295,42 @@ class UserResponse(BaseModel):
     """Current authenticated user info."""
     id: int
     email: str
+    name: Optional[str] = None
+    role: str = "admin"
     is_verified: bool
     created_at: datetime
     verified_at: Optional[datetime] = None
+    last_login_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
-    @field_serializer("created_at", "verified_at")
+    @field_serializer("created_at", "verified_at", "last_login_at")
     def serialize_timestamps(self, value: Optional[datetime]) -> Optional[str]:
         return _utc_timestamp(value) if value else None
+
+
+class UpdateProfileRequest(BaseModel):
+    """Request to update user profile."""
+    name: str
+
+
+class AdminLoginRequest(BaseModel):
+    """Admin quick login request."""
+    email: str
+    passcode: Optional[str] = None
+
+
+class TestAlertEmailRequest(BaseModel):
+    """Request to trigger test incident alert email."""
+    recipient_email: Optional[str] = None
+
+
+class AdminInfoResponse(BaseModel):
+    """Current admin and SMTP notification configuration."""
+    admin_email: str
+    smtp_host: str
+    smtp_user: str
+    smtp_enabled: bool
+    recipient_emails: list[str]
+    total_users: int
+

@@ -1,3 +1,4 @@
+@import "tailwindcss";
 @import './styles/ios-motion.css';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -58,6 +59,33 @@
   --shadow-md:   0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg:   0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-xl:   0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] {
+  /* ── Dark Mode Colors ────────────────────────────────────────– */
+  --bg-primary:     #0c101c;
+  --bg-secondary:   #131a2c;
+  --bg-tertiary:    #1c253c;
+  --bg-card:        #131a2c;
+
+  --border-light:   #1e293b;
+  --border-normal:  #334155;
+  --border-dark:    #475569;
+
+  --accent:         #3b82f6;
+  --accent-light:   rgba(59, 130, 246, 0.16);
+  --accent-hover:   #60a5fa;
+  --accent-faint:   rgba(59, 130, 246, 0.08);
+
+  --text-primary:   #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary:  #94a3b8;
+  --text-muted:     #475569;
+
+  --shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md:   0 4px 8px rgba(0, 0, 0, 0.45);
+  --shadow-lg:   0 10px 20px rgba(0, 0, 0, 0.5);
+  --shadow-xl:   0 20px 30px rgba(0, 0, 0, 0.6);
 }
 
 /* ── Reset ────────────────────────────────────────────────────────– */

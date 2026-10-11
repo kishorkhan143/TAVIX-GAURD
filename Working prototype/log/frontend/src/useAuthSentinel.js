@@ -41,6 +41,7 @@ export function useAuthSentinel(selectedDate) {
   const [alerts, setAlerts]         = useState([]);
   const [labs, setLabs]             = useState([]);
   const [terminals, setTerminals]   = useState([]);
+  const [labHours, setLabHours]     = useState({ start_time: '09:00', end_time: '18:00', is_open: true, status: 'USUAL' });
   const [stats, setStats]           = useState({
     total_events: 0,
     successful_logins: 0,
@@ -78,13 +79,14 @@ export function useAuthSentinel(selectedDate) {
         ? `${BACKEND_URL}/api/alerts?limit=100&date=${dateFilter}`
         : `${BACKEND_URL}/api/alerts?limit=100`;
 
-      const [eventsRes, alertsRes, statsRes, healthRes, labsRes, terminalsRes] = await Promise.all([
+      const [eventsRes, alertsRes, statsRes, healthRes, labsRes, terminalsRes, labHoursRes] = await Promise.all([
         fetch(eventsUrl),
         fetch(alertsUrl),
         fetch(`${BACKEND_URL}/api/stats`),
         fetch(`${BACKEND_URL}/api/health`),
         fetch(`${BACKEND_URL}/api/labs`),
         fetch(`${BACKEND_URL}/api/terminals`),
+        fetch(`${BACKEND_URL}/api/lab-hours`),
       ]);
       if (eventsRes.ok) setEvents(await eventsRes.json());
       if (alertsRes.ok) setAlerts(await alertsRes.json());
@@ -92,6 +94,7 @@ export function useAuthSentinel(selectedDate) {
       if (healthRes.ok) setHealth(await healthRes.json());
       if (labsRes.ok)   setLabs(await labsRes.json());
       if (terminalsRes.ok) setTerminals(await terminalsRes.json());
+      if (labHoursRes?.ok) setLabHours(await labHoursRes.json());
     } catch (err) {
       console.warn('Initial fetch failed:', err);
     } finally {
@@ -131,7 +134,7 @@ export function useAuthSentinel(selectedDate) {
   const updateAlertStatus = useCallback(async (alertId, newStatus) => {
     // Optimistic UI update
     setAlerts(prev =>
-      prev.map(a => (a.id === alertId ? { ...a, status: newStatus, resolved: newStatus === 'RESOLVED' } : a))
+      prev.map(a => (a.id === alertId ? { ...a, status: newStatus, resolved: newStatus === 'RESOLVED' || newStatus === 'AUTHORIZED' } : a))
     );
     try {
       const res = await fetch(`${BACKEND_URL}/api/alerts/${alertId}/status`, {
@@ -144,6 +147,37 @@ export function useAuthSentinel(selectedDate) {
       }
     } catch (err) {
       console.warn('Failed to update alert status:', err);
+    }
+  }, [refreshStats]);
+
+  const executeAlertAction = useCallback(async (alertId, action, options = {}) => {
+    const optStatus = action === 'authorize' ? 'AUTHORIZED' : 'REMEDIATING';
+    // Optimistic UI update
+    setAlerts(prev =>
+      prev.map(a => (a.id === alertId ? { ...a, status: optStatus, resolved: true } : a))
+    );
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/alerts/${alertId}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          note: options.note,
+          terminal_id: options.terminalId,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        refreshStats();
+        return data;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Failed to execute action');
+      }
+    } catch (err) {
+      console.warn('Action execution failed:', err);
+      throw err;
     }
   }, [refreshStats]);
 
@@ -178,6 +212,24 @@ export function useAuthSentinel(selectedDate) {
       console.warn('Failed to delete lab:', err);
     }
   }, [refreshTerminals]);
+
+  const updateLabHours = useCallback(async (startTime, endTime) => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/lab-hours`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start_time: startTime, end_time: endTime }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLabHours(data);
+        return data;
+      }
+    } catch (err) {
+      console.warn('Failed to update lab hours:', err);
+      throw err;
+    }
+  }, []);
 
   const assignTerminal = useCallback(async (terminalId, labId) => {
     // Optimistic UI update
@@ -307,9 +359,55 @@ export function useAuthSentinel(selectedDate) {
         refreshStats();
         break;
 
+      case 'ALERT_ACTION_EXECUTED':
+        setAlerts(prev =>
+          prev.map(a =>
+            a.id === msg.alert_id || a.id === msg.alert?.id
+              ? {
+                  ...a,
+                  status: msg.status || msg.alert?.status || a.status,
+                  resolved: msg.resolved ?? msg.alert?.resolved ?? true,
+                  reason: msg.alert?.reason || a.reason,
+                }
+              : a
+          )
+        );
+        if (msg.message) {
+          addToast({
+            title: `Admin Action: ${msg.action ? msg.action.replace('_', ' ').toUpperCase() : 'VERIFIED'}`,
+            message: msg.message,
+            risk_level: msg.action === 'shutdown' ? 'HIGH' : msg.action === 'lock_screen' ? 'MEDIUM' : 'LOW',
+          });
+        }
+        refreshStats();
+        break;
+
+      case 'COMMAND_DISPATCHED':
+        addToast({
+          title: `Command Dispatched: ${msg.command?.toUpperCase()}`,
+          message: msg.message || `Command sent to ${msg.terminal_id}`,
+          risk_level: 'HIGH',
+        });
+        break;
+
+      case 'COMMAND_ACK':
+        addToast({
+          title: `Command Executed: ${msg.command?.toUpperCase()}`,
+          message: `${msg.terminal_id}: ${msg.message}`,
+          risk_level: 'LOW',
+        });
+        refreshTerminals();
+        break;
+
       case 'TERMINAL_ASSIGNED':
         refreshTerminals();
         refreshLabs();
+        break;
+
+      case 'LAB_HOURS_UPDATED':
+        if (msg.lab_hours) {
+          setLabHours(msg.lab_hours);
+        }
         break;
 
       case 'RESET':
@@ -382,9 +480,12 @@ export function useAuthSentinel(selectedDate) {
     toasts,
     isLoading,
     updateAlertStatus,
+    executeAlertAction,
     addLab,
     deleteLab,
     assignTerminal,
+    labHours,
+    updateLabHours,
     exportLiveTelemetry,
     refreshInitialData: fetchInitialData,
   };

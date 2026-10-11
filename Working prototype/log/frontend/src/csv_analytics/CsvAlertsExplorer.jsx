@@ -55,41 +55,49 @@ export default function CsvAlertsExplorer({ importId }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Filters Bar */}
-      <div className="grouping-bar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+      <div className="grouping-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
           {/* Severity Filter Dropdown Form */}
-          <CustomSelect
-            label="Severity:"
-            value={severityFilter}
-            onChange={(e) => setSeverityFilter(e.target.value)}
-            options={[
-              { value: 'ALL', label: 'ALL' },
-              { value: 'CRITICAL', label: 'CRITICAL' },
-              { value: 'HIGH', label: 'HIGH' },
-              { value: 'MEDIUM', label: 'MEDIUM' },
-              { value: 'LOW', label: 'LOW' },
-            ]}
-            style={{ minWidth: '120px' }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+              Severity:
+            </span>
+            <CustomSelect
+              value={severityFilter}
+              onChange={(e) => setSeverityFilter(e.target.value)}
+              options={[
+                { value: 'ALL', label: 'ALL' },
+                { value: 'CRITICAL', label: 'CRITICAL' },
+                { value: 'HIGH', label: 'HIGH' },
+                { value: 'MEDIUM', label: 'MEDIUM' },
+                { value: 'LOW', label: 'LOW' },
+              ]}
+              style={{ minWidth: '120px' }}
+            />
+          </div>
 
           {/* Status Filter Dropdown Form */}
-          <CustomSelect
-            label="Status:"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            options={[
-              { value: 'ALL', label: 'ALL' },
-              { value: 'OPEN', label: 'OPEN' },
-              { value: 'INVESTIGATING', label: 'INVESTIGATING' },
-              { value: 'RESOLVED', label: 'RESOLVED' },
-            ]}
-            style={{ minWidth: '140px' }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+              Status:
+            </span>
+            <CustomSelect
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { value: 'ALL', label: 'ALL' },
+                { value: 'OPEN', label: 'OPEN' },
+                { value: 'INVESTIGATING', label: 'INVESTIGATING' },
+                { value: 'RESOLVED', label: 'RESOLVED' },
+              ]}
+              style={{ minWidth: '140px' }}
+            />
+          </div>
         </div>
 
-        <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
-          Showing {filteredAlerts.length} alerts
-        </span>
+        <div style={{ fontSize: '12.5px', fontWeight: 500, color: 'var(--text-tertiary)', background: 'var(--bg-secondary)', padding: '6px 14px', borderRadius: '100px', border: '1px solid var(--border-light)' }}>
+          Showing <strong style={{ color: 'var(--text-primary)' }}>{filteredAlerts.length}</strong> alerts
+        </div>
       </div>
 
       {/* Security Alerts Table: User | Source IP | Count | Attack / Alert Type | Risk Level | Action */}

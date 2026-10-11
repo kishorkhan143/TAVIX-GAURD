@@ -1,33 +1,41 @@
 /**
- * AuthSentinel — Main App Router
+ * TAVIX GUARD — Main App Router
  * ================================
- * Handles authentication routing and protects dashboard routes.
+ * Routes and Administrator Authentication.
  */
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { MotionConfig } from 'motion/react';
 
-// Pages & Components
+import Dashboard from './Dashboard';
 import LoginPage from './pages/LoginPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
-import ProtectedRoute from './components/ProtectedRoute';
-import Dashboard from './Dashboard';
-
-// Auth & Providers
-import { useAuth } from './useAuth';
 import { DateProvider } from './dateFilterUtils';
+import { useAuth } from './useAuth';
 
 export default function App() {
-  const { token, user, isLoading, isAuthenticated, login, logout } = useAuth();
+  const { token, user, isLoading, isAuthenticated, login, logout, updateUser } = useAuth();
 
-  const handleVerified = (jwtToken) => {
+  const handleLogin = (jwtToken) => {
     login(jwtToken);
   };
+
+  const handleLogout = () => {
+    logout();
+  };
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0b0f19', color: '#94a3b8' }}>
+        Loading session...
+      </div>
+    );
+  }
 
   return (
     <MotionConfig reducedMotion="user">
       <Routes>
-        {/* Redirect root to login if not authenticated */}
+        {/* Root redirect: if authenticated -> dashboard, else -> login */}
         <Route
           path="/"
           element={
@@ -39,24 +47,46 @@ export default function App() {
           }
         />
 
-        {/* Public Auth Routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage onVerified={handleVerified} />} />
+        {/* Auth routes */}
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <LoginPage onLogin={handleLogin} />
+            )
+          }
+        />
+        <Route
+          path="/verify-email"
+          element={<VerifyEmailPage onVerified={handleLogin} />}
+        />
 
-        {/* Protected Dashboard Routes */}
+        {/* Protected Dashboard */}
         <Route
           path="/dashboard/*"
           element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+            isAuthenticated ? (
               <DateProvider>
-                <Dashboard user={user} onLogout={logout} />
+                <Dashboard
+                  user={user}
+                  token={token}
+                  onLogout={handleLogout}
+                  onUpdateUser={updateUser}
+                />
               </DateProvider>
-            </ProtectedRoute>
+            ) : (
+              <Navigate to="/login" replace />
+            )
           }
         />
 
-        {/* Catch-all - redirect unknown routes to home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Catch-all */}
+        <Route
+          path="*"
+          element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />}
+        />
       </Routes>
     </MotionConfig>
   );

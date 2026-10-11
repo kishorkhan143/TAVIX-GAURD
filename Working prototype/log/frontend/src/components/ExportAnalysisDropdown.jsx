@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   exportIncidentAnalysisCsv,
   exportIncidentAnalysisJson,
   exportIncidentAnalysisPdf,
+  triggerDownload,
 } from '../utils/exportIncidentAnalysis';
+import { BACKEND_URL } from '../useAuthSentinel';
 
 export default function ExportAnalysisDropdown({ alerts = [] }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -35,24 +38,65 @@ export default function ExportAnalysisDropdown({ alerts = [] }) {
     }, 4000);
   };
 
-  const handleExport = (format) => {
+  const handleExport = async (format) => {
     setIsOpen(false);
-
-    if (!alerts || alerts.length === 0) {
-      showFeedback('No incident data available to export in current view.', 'error');
-      return;
-    }
+    showFeedback(`Exporting database data to ${format.toUpperCase()}...`, 'info');
 
     try {
       if (format === 'csv') {
-        exportIncidentAnalysisCsv(alerts);
-        showFeedback(`Exported ${alerts.length} incidents to TAVIX_GUARD_Incident_Analysis.csv`, 'success');
-      } else if (format === 'json') {
-        exportIncidentAnalysisJson(alerts);
-        showFeedback(`Exported ${alerts.length} incidents to TAVIX_GUARD_Incident_Analysis.json`, 'success');
-      } else if (format === 'pdf') {
-        exportIncidentAnalysisPdf(alerts);
-        showFeedback(`Generated TAVIX_GUARD_Incident_Analysis.pdf report successfully`, 'success');
+        // Fetch real CSV export directly from backend SQLite database
+        const res = await fetch(`${BACKEND_URL}/api/telemetry/export`);
+        if (res.ok) {
+          const blob = await res.blob();
+          triggerDownload(blob, `TAVIX_GUARD_Database_Telemetry_${new Date().toISOString().slice(0, 10)}.csv`);
+          showFeedback('Exported database events to CSV successfully', 'success');
+          return;
+        }
+      }
+
+      // If json or pdf or fallback: fetch active database records
+      let exportAlerts = alerts;
+      if (!exportAlerts || exportAlerts.length === 0) {
+        try {
+          const res = await fetch(`${BACKEND_URL}/api/alerts?limit=200`);
+          if (res.ok) {
+            exportAlerts = await res.json();
+          }
+        } catch (_) {}
+      }
+
+      let exportEvents = [];
+      try {
+        const evRes = await fetch(`${BACKEND_URL}/api/events?limit=200`);
+        if (evRes.ok) {
+          exportEvents = await evRes.json();
+        }
+      } catch (_) {}
+
+      if (format === 'json') {
+        const fullPayload = {
+          export_time: new Date().toISOString(),
+          database_events_count: exportEvents.length,
+          database_incidents_count: (exportAlerts || []).length,
+          events: exportEvents,
+          incidents: exportAlerts || [],
+        };
+        const blob = new Blob([JSON.stringify(fullPayload, null, 2)], { type: 'application/json' });
+        triggerDownload(blob, `TAVIX_GUARD_Database_Export_${new Date().toISOString().slice(0, 10)}.json`);
+        showFeedback(`Exported database records to JSON successfully`, 'success');
+        return;
+      }
+
+      if (format === 'pdf') {
+        exportIncidentAnalysisPdf((exportAlerts && exportAlerts.length > 0) ? exportAlerts : exportEvents);
+        showFeedback('Generated TAVIX_GUARD_Incident_Analysis.pdf report successfully', 'success');
+        return;
+      }
+
+      if (format === 'csv') {
+        exportIncidentAnalysisCsv((exportAlerts && exportAlerts.length > 0) ? exportAlerts : exportEvents);
+        showFeedback('Exported incident records to CSV successfully', 'success');
+        return;
       }
     } catch (err) {
       console.error('Export error:', err);
@@ -123,26 +167,30 @@ export default function ExportAnalysisDropdown({ alerts = [] }) {
       </button>
 
       {/* Dropdown Menu */}
-      {isOpen && (
-        <div
-          role="menu"
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            right: 0,
-            width: '230px',
-            background: 'var(--bg-card, #ffffff)',
-            border: '1px solid var(--border-light, #e5e7eb)',
-            borderRadius: 'var(--radius-lg, 12px)',
-            boxShadow: 'var(--ios-shadow-popover, 0 16px 36px -6px rgba(0, 0, 0, 0.15))',
-            zIndex: 1000,
-            padding: '6px',
-            animation: 'iosDropdownEntrance var(--ios-duration-normal, 0.22s) var(--ios-spring-soft, cubic-bezier(0.16, 1, 0.3, 1))',
-            transformOrigin: 'top right',
-            backdropFilter: 'blur(16px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-          }}
-        >
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            role="menu"
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 28 }}
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              right: 0,
+              width: '230px',
+              background: 'var(--bg-card, #ffffff)',
+              border: '1px solid var(--border-light, #e5e7eb)',
+              borderRadius: 'var(--radius-lg, 12px)',
+              boxShadow: 'var(--ios-shadow-popover, 0 16px 36px -6px rgba(0, 0, 0, 0.15))',
+              zIndex: 1000,
+              padding: '6px',
+              transformOrigin: 'top right',
+              backdropFilter: 'blur(16px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+            }}
+          >
           <div
             style={{
               padding: '6px 10px 4px 10px',
@@ -292,8 +340,9 @@ export default function ExportAnalysisDropdown({ alerts = [] }) {
               <div style={{ fontSize: '11px', color: 'var(--text-tertiary, #9ca3af)' }}>Official incident audit report</div>
             </div>
           </button>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Floating Status Toast Notification */}
       {statusMessage && (

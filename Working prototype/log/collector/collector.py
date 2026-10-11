@@ -22,12 +22,12 @@ Requirements (run once):
 
 Usage
 -----
-  python collector.py [--backend URL] [--label NAME] [--interval SECONDS]
+  python collector.py [--backend URL] [--label NAME] [--interval SECONDS (default: 0.1)]
 
 Arguments:
   --backend   Backend URL  (default: http://127.0.0.1:8000)
   --label     Override the source label sent to the backend (default: hostname)
-  --interval  Poll interval in seconds (default: 2)
+  --interval  Poll interval in seconds (default: 0.1 for near-real-time forwarding)
 """
 
 from __future__ import annotations
@@ -38,11 +38,20 @@ import sys
 import time
 import socket
 import logging
+import threading
+import platform
+import ctypes
+import getpass
+import uuid
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 from typing import Optional
 
 import requests
-import win32evtlog
+try:
+    import win32evtlog
+except ImportError:
+    win32evtlog = None
 from colorama import Fore, Style, init as colorama_init
 
 # ── Console encoding fix for Windows ─────────────────────────────────────────
@@ -84,28 +93,54 @@ LOGON_TYPES = {
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-import platform
-import ctypes
-import getpass
-import uuid
+def get_local_ip(backend_url: str = "") -> str:
+    """Reliably get Laptop A's LAN IP address (not 127.0.0.1)."""
+    # 1. Try connecting UDP towards backend host
+    if backend_url:
+        try:
+            parsed = urlparse(backend_url)
+            host = parsed.hostname or ""
+            port = parsed.port or 80
+            if host and not host.startswith("127.") and host != "localhost":
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.settimeout(1.0)
+                s.connect((host, port))
+                ip = s.getsockname()[0]
+                s.close()
+                if ip and not ip.startswith("127."):
+                    return ip
+        except Exception:
+            pass
 
-def get_local_ip() -> str:
-    """Reliably get the LAN IP (not 127.0.0.1)."""
+    # 2. Try standard outbound route to 8.8.8.8
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(1.0)
         s.connect(("8.8.8.8", 80))
         ip = s.getsockname()[0]
         s.close()
-        return ip
+        if ip and not ip.startswith("127."):
+            return ip
     except Exception:
-        return socket.gethostbyname(socket.gethostname())
+        pass
+
+    # 3. Check all host addresses for non-loopback IPv4
+    try:
+        hostname = socket.gethostname()
+        for ip in socket.gethostbyname_ex(hostname)[2]:
+            if not ip.startswith("127."):
+                return ip
+    except Exception:
+        pass
+
+    return "127.0.0.1"
 
 
 def get_system_info() -> dict:
     """Collect real system hardware and OS specs on Windows."""
     hostname = socket.gethostname()
     computer_name = os.environ.get("COMPUTERNAME") or hostname
-    
+
     os_name = platform.system()
     os_release = platform.release()
     os_version = platform.version()
@@ -179,6 +214,7 @@ def print_banner(hostname: str, local_ip: str, backend: str, label: str) -> None
 +--------------------------------------------------+
 |     AUTH SENTINEL  --  Windows Event Collector   |
 |      Real-time Security Event Forwarder          |
+|      (Remote Defense & Command Listener Active)  |
 +--------------------------------------------------+
 """)
     sys_info = get_system_info()
@@ -189,10 +225,12 @@ def print_banner(hostname: str, local_ip: str, backend: str, label: str) -> None
     print(f"  Label     : {Fore.YELLOW}{label}{Style.RESET_ALL}")
     print(f"  Backend   : {Fore.GREEN}{backend}{Style.RESET_ALL}")
     print(f"  Watching  : Event IDs {sorted(TARGET_EVENT_IDS)}")
+    print(f"  Commands  : Listening for Admin Actions (Shutdown / Lock Screen / Authorize)")
     print()
 
 
-def parse_event(event, target_computer: str, debug: bool = False) -> Optional[dict]:
+def parse_event(event, target_computer: str, local_ip: str = "", debug: bool = False) -> Optional[dict]:
+
     """
     Extract security-event metadata from a pywin32 event record.
     Returns None for uninteresting or system-account events.
@@ -268,12 +306,17 @@ def parse_event(event, target_computer: str, debug: bool = False) -> Optional[di
 
         status = "SUCCESS" if event_id == 4624 else "FAILURE"
 
+        # Fallback to Laptop A's LAN IP if source_ip is local or not logged
+        if not source_ip or source_ip in ("::1", "127.0.0.1", "-", ""):
+            source_ip = local_ip or None
+
         return {
             "event_id":              event_id,
             "timestamp":             ts.isoformat(),
             "username":              username,
             "source_ip":             source_ip,
-            "source_host":           source_host,
+            "laptop_ip":             local_ip,
+            "source_host":           source_host or target_computer,
             "target_computer":       target_computer,
             "logon_type":            logon_type,
             "logon_type_description": LOGON_TYPES.get(logon_type) if logon_type else None,
@@ -318,10 +361,10 @@ class EventCollector:
     def __init__(self, backend_url: str, label: str, interval: float, debug: bool = False) -> None:
         self.backend_url    = backend_url.rstrip("/")
         self.label          = label
-        self.interval       = interval
+        self.interval       = max(0.05, interval)  # avoid a zero-delay CPU-intensive loop
         self.debug          = debug
         self.hostname       = socket.gethostname()
-        self.local_ip       = get_local_ip()
+        self.local_ip       = get_local_ip(self.backend_url)
         self._headers       = {
             "Content-Type":      "application/json",
             "X-Collector-Secret": COLLECTOR_SECRET,
@@ -331,6 +374,9 @@ class EventCollector:
         print(Fore.CYAN + f"Starting after RecordNumber={self._last_record}")
         self._backend_ok    = False
         self._recent_success = {}
+        self._running       = True
+        self._command_thread = threading.Thread(target=self._command_worker, daemon=True)
+        self._command_thread.start()
 
     @staticmethod
     def _get_latest_record() -> int:
@@ -411,6 +457,100 @@ class EventCollector:
             )
         except Exception:
             pass
+
+    # ── Remote Command Execution (Admin Actions from Dashboard) ───────────────
+
+    def _command_worker(self) -> None:
+        """Background thread polling for admin remote commands (shutdown, lock screen, authorize)."""
+        while self._running:
+            if self._backend_ok:
+                try:
+                    self._check_for_commands()
+                except Exception as exc:
+                    logging.debug("Command worker error: %s", exc)
+            time.sleep(1.0)
+
+    def _check_for_commands(self) -> None:
+        try:
+            r = requests.get(
+                f"{self.backend_url}/api/collector/commands?terminal_id={self.label}",
+                headers=self._headers,
+                timeout=4,
+            )
+            if r.status_code == 200:
+                commands = r.json()
+                if isinstance(commands, list):
+                    for cmd in commands:
+                        self._execute_remote_command(cmd)
+        except Exception as exc:
+            logging.debug("Command check error: %s", exc)
+
+    def _execute_remote_command(self, cmd: dict) -> None:
+        cmd_id = cmd.get("id")
+        action = (cmd.get("command") or "").lower().strip()
+        alert_id = cmd.get("alert_id")
+        alert_tag = f" (Alert ALT-{alert_id:04d})" if alert_id else ""
+
+        print()
+        print(Fore.MAGENTA + Style.BRIGHT + "==================================================")
+        print(Fore.MAGENTA + Style.BRIGHT + f" [ADMIN COMMAND RECEIVED] {action.upper()}{alert_tag}")
+        print(Fore.MAGENTA + Style.BRIGHT + "==================================================")
+
+        if action == "lock_screen":
+            print(Fore.YELLOW + "  -> Action: Locking Windows workstation immediately ...")
+            success = False
+            msg = ""
+            try:
+                if sys.platform == "win32":
+                    import ctypes
+                    ctypes.windll.user32.LockWorkStation()
+                    success = True
+                    msg = "Workstation locked successfully via user32.LockWorkStation"
+                    print(Fore.GREEN + f"  [EXECUTED] {msg}")
+                else:
+                    success = True
+                    msg = "Non-Windows environment: LockWorkStation simulated"
+                    print(Fore.CYAN + f"  [SIMULATION] {msg}")
+            except Exception as e:
+                msg = f"Failed to lock workstation: {e}"
+                print(Fore.RED + f"  [ERROR] {msg}")
+
+            self._ack_command(cmd_id, status="EXECUTED" if success else "FAILED", message=msg)
+
+        elif action == "shutdown":
+            print(Fore.RED + Style.BRIGHT + "  -> Action: Remote shutdown command received from Admin!")
+            msg = "Windows shutdown sequence initiated with 5-second countdown"
+            # Acknowledge to backend BEFORE shutting down so the dashboard receives confirmation!
+            self._ack_command(cmd_id, status="EXECUTED", message=msg)
+            print(Fore.GREEN + f"  [ACK SENT] Dashboard updated: {msg}")
+            print(Fore.RED + "  [EXECUTING] shutdown /s /f /t 5 ...")
+            try:
+                if sys.platform == "win32":
+                    os.system('shutdown /s /f /t 5 /c "Security Alert: Remote system shutdown initiated by AuthSentinel Admin"')
+                else:
+                    print(Fore.CYAN + "  [SIMULATION] Non-Windows environment: shutdown simulated.")
+            except Exception as e:
+                print(Fore.RED + f"  [ERROR] Shutdown execution error: {e}")
+
+        elif action == "authorize":
+            print(Fore.GREEN + "  -> Notice: Administrator authorized activity — marked benign (No problem).")
+            self._ack_command(cmd_id, status="EXECUTED", message="Authorization acknowledged by Laptop A")
+
+        else:
+            print(Fore.YELLOW + f"  [WARN] Unknown action: {action}")
+            self._ack_command(cmd_id, status="FAILED", message=f"Unknown action: {action}")
+
+    def _ack_command(self, cmd_id: int, status: str, message: str) -> None:
+        try:
+            requests.post(
+                f"{self.backend_url}/api/collector/commands/{cmd_id}/ack",
+                json={"status": status, "message": message},
+                headers=self._headers,
+                timeout=5,
+            )
+        except Exception as exc:
+            logging.debug("Ack command exception: %s", exc)
+
 
     def _post_event(self, payload: dict) -> str:
         try:
@@ -588,9 +728,17 @@ class EventCollector:
                     parsed = parse_event(
                         ev,
                         target_computer=self.label,
+                        local_ip=self.local_ip,
                         debug=self.debug,
                     )
                     if parsed:
+                        # Event ID 4624 with logon type 7 is a workstation unlock,
+                        # not a new interactive login. Do not forward it as a second login.
+                        if parsed["event_id"] == 4624 and parsed.get("logon_type") == 7:
+                            print(Style.DIM + "  [SKIP] Windows unlock event (logon_type=7) ignored")
+                            self._last_record = record_number
+                            continue
+
                         if self._is_duplicate_success(parsed):
                             print(
                                 Style.DIM
@@ -668,6 +816,7 @@ class EventCollector:
     def run(self) -> None:
         print_banner(self.hostname, self.local_ip, self.backend_url, self.label)
         print(f"Events will appear on the dashboard as source_host={self.label}")
+        print(f"Polling interval: {self.interval * 1000:.0f} ms (near-real-time; network/backend/UI latency still applies)")
         print(
             "Failed logons: forwarding 4625 events; wrong PIN attempts on Windows Hello may not be logged by Windows"
         )
@@ -685,7 +834,7 @@ class EventCollector:
                         self._send_status("CONNECTED", f"{self.label} reconnected")
                         print(Fore.GREEN + "[OK] Backend reconnected\n")
                 now = time.monotonic()
-                if now - last_heartbeat >= 15:
+                if now - last_heartbeat >= 30:
                     self._send_status(
                         "CONNECTED",
                         f"Collector on {self.label} ({self.local_ip}) heartbeat",
@@ -724,8 +873,8 @@ def main() -> None:
     parser.add_argument(
         "--interval",
         type=float,
-        default=float(os.environ.get("AS_COLLECTOR_POLL_INTERVAL", "2")),
-        help="Poll interval in seconds",
+        default=float(os.environ.get("AS_COLLECTOR_POLL_INTERVAL", "0.1")),
+        help="Poll interval in seconds; 0.1 means check for new events every 100 ms",
     )
     parser.add_argument(
         "--debug",

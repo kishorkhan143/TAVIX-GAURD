@@ -76,6 +76,10 @@ export const useAuth = () => {
     setUser(null);
   }, []);
 
+  const updateUser = useCallback((updatedData) => {
+    setUser((prev) => (prev ? { ...prev, ...updatedData } : updatedData));
+  }, []);
+
   const isAuthenticated = useCallback(() => {
     if (!token) return false;
     return !isTokenExpired(token);
@@ -88,5 +92,7 @@ export const useAuth = () => {
     isAuthenticated: isAuthenticated(),
     login,
     logout,
+    updateUser,
+    refetchUser: () => token && fetchUserInfo(token),
   };
 };

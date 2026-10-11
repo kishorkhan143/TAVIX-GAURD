@@ -36,8 +36,8 @@ def init_db() -> None:
     # Ensure CSV analytics models, Computer model, and legacy models are registered
     from csv_analytics.models import CsvImport, CsvAlert, CsvRecord  # noqa: F401
     import models
-    models.Base.metadata.create_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    models.Base.metadata.create_all(bind=engine, checkfirst=True)
+    Base.metadata.create_all(bind=engine, checkfirst=True)
     with engine.begin() as connection:
         try:
             connection.execute(text("ALTER TABLE alerts ADD COLUMN status VARCHAR(32) DEFAULT 'OPEN'"))
@@ -72,15 +72,83 @@ def init_db() -> None:
                 "ON auth_events (source_host, raw_record_id)"
             )
         )
+        connection.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS remote_commands ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "terminal_id VARCHAR(256) NOT NULL, "
+                "command VARCHAR(64) NOT NULL, "
+                "alert_id INTEGER, "
+                "status VARCHAR(32) DEFAULT 'PENDING', "
+                "payload TEXT, "
+                "result_message TEXT, "
+                "created_at TIMESTAMP, "
+                "executed_at TIMESTAMP"
+                ")"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS "
+                "ix_remote_commands_terminal_status "
+                "ON remote_commands (terminal_id, status)"
+            )
+        )
+        try:
+            connection.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(32) DEFAULT 'admin'"))
+        except Exception:
+            pass
+        try:
+            connection.execute(text("ALTER TABLE users ADD COLUMN name VARCHAR(256)"))
+        except Exception:
+            pass
+        try:
+            connection.execute(text("ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP"))
+        except Exception:
+            pass
+        try:
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS "
+                    "ix_users_verification_token "
+                    "ON users (verification_token)"
+                )
+            )
+        except Exception:
+            pass
     logger.info("Database tables created/verified")
     
-    # Initialize reference data
+    # Initialize reference data and seed default admin
     with SessionLocal() as session:
         try:
             get_or_create_risk_band_defaults(session)
             logger.info("Risk bands initialized")
         except Exception as e:
             logger.error(f"Failed to initialize risk bands: {e}")
+
+        try:
+            from datetime import datetime, timezone
+            admin_email = os.getenv("DEFAULT_ADMIN_EMAIL", "kishorkhan.dev@gmail.com").strip().lower()
+            admin_user = session.query(models.User).filter(models.User.email == admin_email).first()
+            now = datetime.now(timezone.utc)
+            if not admin_user:
+                admin_user = models.User(
+                    email=admin_email,
+                    role="admin",
+                    is_verified=True,
+                    created_at=now,
+                    verified_at=now,
+                )
+                session.add(admin_user)
+                session.commit()
+                logger.info("Default admin user initialized: %s", admin_email)
+            else:
+                if not admin_user.is_verified or admin_user.role != "admin":
+                    admin_user.is_verified = True
+                    admin_user.role = "admin"
+                    session.commit()
+        except Exception as e:
+            logger.error(f"Failed to ensure admin user: {e}")
 
 
 def get_db() -> Session:

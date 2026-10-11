@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import io
+import json
 import logging
 import os
 import sys
@@ -45,9 +46,10 @@ from sqlalchemy import func, select, desc, text
 from sqlalchemy.orm import Session
 
 import detection
+import smtp_service
 from config import settings
-from database import get_db, init_db
-from models import Alert, AuthEvent, Laboratory, TerminalAssignment, Computer
+from database import get_db, init_db, SessionLocal
+from models import Alert, AuthEvent, Laboratory, TerminalAssignment, Computer, RemoteCommand
 from schemas import (
     AlertResponse,
     CollectorStatusRequest,
@@ -57,12 +59,17 @@ from schemas import (
     StatsResponse,
     LabCreateRequest,
     LabResponse,
+    LabHoursRequest,
+    LabHoursResponse,
     TerminalAssignRequest,
     TerminalResponse,
     LastAuthEventSummary,
     ComputerSummary,
     LabComputersResponse,
     ComputerDetailResponse,
+    AlertActionRequest,
+    CommandAckRequest,
+    RemoteCommandResponse,
 )
 from ws_manager import manager
 from csv_analytics import csv_router
@@ -211,7 +218,7 @@ async def reset_all(
     """Delete all events and alerts, reset detection windows."""
     db.execute(text("DELETE FROM alerts"))
     db.execute(text("DELETE FROM auth_events"))
-    for tbl in ["incidents", "risk_snapshots", "risk_contributions", "computers", "terminal_assignments", "csv_alerts", "csv_records", "csv_imports"]:
+    for tbl in ["remote_commands", "incidents", "risk_snapshots", "risk_contributions", "computers", "terminal_assignments", "csv_alerts", "csv_records", "csv_imports"]:
         try:
             db.execute(text(f"DELETE FROM {tbl}"))
         except Exception:
@@ -363,7 +370,13 @@ async def ingest_event(
     _: None = Depends(verify_collector),
     x_source_label: Optional[str] = Header(None),
 ):
-    source_label = x_source_label or body.source_host or body.target_computer
+    source_label = x_source_label or body.source_host or body.target_computer or "LAPTOP-A"
+
+    # Reliably resolve Laptop A's LAN IP address
+    collector_info = _collectors.get(source_label, {})
+    resolved_ip = body.source_ip
+    if not resolved_ip or resolved_ip in ("::1", "127.0.0.1", "-", "UNKNOWN"):
+        resolved_ip = getattr(body, "laptop_ip", None) or collector_info.get("ip") or body.source_ip
 
     if body.raw_record_id is not None:
         existing_event = db.execute(
@@ -384,7 +397,7 @@ async def ingest_event(
     alert_data = detection.evaluate(
         event_id=body.event_id,
         username=body.username or "",
-        source_ip=body.source_ip or "",
+        source_ip=resolved_ip or "",
         timestamp=body.timestamp,
         status=body.status,
     )
@@ -392,20 +405,22 @@ async def ingest_event(
     risk_score = 10.0 if body.status == "SUCCESS" else 30.0
     risk_level = "LOW"
     detection_reason = None
-
     if alert_data:
         risk_score = alert_data["risk_score"]
         risk_level = alert_data["risk_level"]
         detection_reason = alert_data["reason"]
+    elif body.status == "SUCCESS":
+        detection_reason = "Within Authorized Lab Hours (Usual)"
 
     # ── Persist event ──────────────────────────────────────────────────────
+    target_comp = body.target_computer or source_label
     event = AuthEvent(
         event_id=body.event_id,
         timestamp=body.timestamp,
         username=body.username,
-        source_ip=body.source_ip,
+        source_ip=resolved_ip,
         source_host=source_label,
-        target_computer=body.target_computer,
+        target_computer=target_comp,
         logon_type=body.logon_type,
         logon_type_description=body.logon_type_description,
         status=body.status,
@@ -429,20 +444,22 @@ async def ingest_event(
         alert_obj = Alert(
             alert_type=alert_data["alert_type"],
             username=alert_data["username"],
-            source_ip=alert_data["source_ip"],
+            source_ip=resolved_ip or alert_data.get("source_ip"),
             source_host=source_label,
-            target_computer=body.target_computer,
+            target_computer=target_comp,
             risk_score=alert_data["risk_score"],
             risk_level=alert_data["risk_level"],
             failure_count=alert_data["failure_count"],
             time_window_seconds=alert_data["time_window_seconds"],
             reason=alert_data["reason"],
+            status="OPEN",
             triggered_at=datetime.now(timezone.utc),
         )
         db.add(alert_obj)
         logger.warning(
-            "[ALERT] %s user=%s risk=%s",
+            "[ALERT] %s user=%s risk=%s host=%s ip=%s",
             alert_data["alert_type"], alert_data["username"], alert_data["risk_level"],
+            source_label, resolved_ip,
         )
 
     db.commit()
@@ -489,6 +506,31 @@ async def ingest_event(
                 "triggered_at": _utc_isoformat(alert_obj.triggered_at),
             },
         })
+
+        # ── Dispatch Incident Alert Email via SMTP ───────────────────────────
+        try:
+            incident_payload = {
+                "id": alert_obj.id,
+                "alert_type": alert_obj.alert_type,
+                "username": alert_obj.username or "Unknown",
+                "source_ip": alert_obj.source_ip or "Unknown",
+                "source_host": source_label,
+                "target_computer": alert_obj.target_computer or "Primary Terminal",
+                "risk_score": alert_obj.risk_score,
+                "risk_level": alert_obj.risk_level,
+                "failure_count": alert_obj.failure_count,
+                "time_window_seconds": alert_obj.time_window_seconds,
+                "reason": alert_obj.reason,
+                "triggered_at": _utc_isoformat(alert_obj.triggered_at),
+            }
+            asyncio.create_task(
+                smtp_service.send_incident_alert_async(
+                    incident_payload,
+                    db_session_factory=SessionLocal,
+                )
+            )
+        except Exception as e:
+            logger.error("[SMTP ERROR] Could not dispatch incident email: %s", e)
 
     return event
 
@@ -541,11 +583,11 @@ async def update_alert_status(
         raise HTTPException(status_code=404, detail="Alert not found")
     
     new_status = (body.get("status") or "OPEN").upper()
-    if new_status not in ("OPEN", "INVESTIGATING", "RESOLVED"):
+    if new_status not in ("OPEN", "INVESTIGATING", "RESOLVED", "AUTHORIZED", "REMEDIATING"):
         raise HTTPException(status_code=400, detail="Invalid status value")
     
     alert.status = new_status
-    alert.resolved = (new_status == "RESOLVED")
+    alert.resolved = (new_status in ("RESOLVED", "AUTHORIZED"))
     db.commit()
     db.refresh(alert)
     
@@ -558,6 +600,268 @@ async def update_alert_status(
         }
     })
     return {"ok": True, "alert_id": alert.id, "status": alert.status, "resolved": alert.resolved}
+
+
+# ── Alert Action Execution (Shutdown / Lock Screen / Authorize) ─────────────
+@app.post("/api/alerts/{alert_id}/action")
+async def execute_alert_action(
+    alert_id: int,
+    body: AlertActionRequest,
+    db: Session = Depends(get_db),
+):
+    alert = db.get(Alert, alert_id)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    action = (body.action or "").lower().strip()
+    if action not in ("shutdown", "lock_screen", "authorize"):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid action. Must be 'shutdown', 'lock_screen', or 'authorize'."
+        )
+
+    now_utc = datetime.now(timezone.utc)
+
+    if action == "authorize":
+        # Authorize: Verified benign by admin (No problem)
+        alert.status = "AUTHORIZED"
+        alert.resolved = True
+        auth_note = body.note or "Verified benign by Administrator (Authorized - No problem)"
+        alert.reason = f"{alert.reason or ''}\n[ADMIN ACTION: {auth_note}]".strip()
+        db.commit()
+        db.refresh(alert)
+
+        await manager.broadcast({
+            "type": "ALERT_ACTION_EXECUTED",
+            "alert_id": alert.id,
+            "action": "authorize",
+            "status": "AUTHORIZED",
+            "resolved": True,
+            "message": "Activity authorized by administrator — marked as benign (no problem).",
+            "timestamp": _utc_isoformat(now_utc),
+            "alert": {
+                "id": alert.id,
+                "status": alert.status,
+                "resolved": alert.resolved,
+                "reason": alert.reason,
+            }
+        })
+
+        logger.info("[ACTION] Alert ALT-%04d AUTHORIZED by admin (No problem)", alert.id)
+        return {
+            "ok": True,
+            "action": "authorize",
+            "alert_id": alert.id,
+            "status": "AUTHORIZED",
+            "message": "Alert authorized by administrator (No problem).",
+        }
+
+    # Action is "shutdown" or "lock_screen"
+    target = body.terminal_id or alert.source_host or alert.target_computer
+    if (not target or target == "UNKNOWN") and alert.source_ip:
+        comp = db.execute(select(Computer).where(Computer.ip_address == alert.source_ip)).scalars().first()
+        if comp:
+            target = comp.terminal_id
+    if not target:
+        target = "LAPTOP-A"
+
+    cmd = RemoteCommand(
+        terminal_id=target,
+        command=action,
+        alert_id=alert.id,
+        status="PENDING",
+        payload=json.dumps({
+            "alert_id": alert.id,
+            "username": alert.username,
+            "source_ip": alert.source_ip,
+            "note": body.note or f"Admin security action ({action}) triggered for alert ALT-{alert.id:04d}",
+        }),
+        created_at=now_utc,
+    )
+    db.add(cmd)
+
+    action_label = "Shutdown" if action == "shutdown" else "Lock Screen"
+    alert.status = "REMEDIATING"
+    alert.resolved = True
+    alert.reason = f"{alert.reason or ''}\n[ADMIN ACTION: Dispatched {action_label} to {target}]".strip()
+    db.commit()
+    db.refresh(cmd)
+    db.refresh(alert)
+
+    # Broadcast command dispatched
+    await manager.broadcast({
+        "type": "COMMAND_DISPATCHED",
+        "command_id": cmd.id,
+        "terminal_id": target,
+        "command": action,
+        "alert_id": alert.id,
+        "message": f"Remote {action_label} command dispatched to {target}",
+        "timestamp": _utc_isoformat(now_utc),
+    })
+
+    # Broadcast alert updated
+    await manager.broadcast({
+        "type": "ALERT_ACTION_EXECUTED",
+        "alert_id": alert.id,
+        "action": action,
+        "command_id": cmd.id,
+        "terminal_id": target,
+        "status": alert.status,
+        "resolved": alert.resolved,
+        "message": f"Remediation initiated: {action_label} dispatched to {target}",
+        "timestamp": _utc_isoformat(now_utc),
+        "alert": {
+            "id": alert.id,
+            "status": alert.status,
+            "resolved": alert.resolved,
+            "reason": alert.reason,
+        }
+    })
+
+    logger.info("[ACTION] %s command queued for %s (Alert ALT-%04d)", action, target, alert.id)
+    return {
+        "ok": True,
+        "command_id": cmd.id,
+        "terminal_id": target,
+        "action": action,
+        "status": "PENDING",
+        "message": f"{action_label} command queued for {target}.",
+    }
+
+
+# ── Collector Commands Endpoint (Polled by Laptop A) ─────────────────────────
+@app.get("/api/collector/commands")
+async def get_collector_commands(
+    terminal_id: Optional[str] = Query(None),
+    x_source_label: Optional[str] = Header(None),
+    x_collector_secret: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    if x_collector_secret != settings.collector_secret:
+        raise HTTPException(status_code=403, detail="Invalid collector secret")
+
+    label = terminal_id or x_source_label
+    stmt = select(RemoteCommand).where(RemoteCommand.status.in_(["PENDING", "SENT"]))
+    if label:
+        stmt = stmt.where(
+            (RemoteCommand.terminal_id == label) |
+            (RemoteCommand.terminal_id == "ALL") |
+            (func.upper(RemoteCommand.terminal_id) == label.upper())
+        )
+    commands = db.execute(stmt).scalars().all()
+
+    result = []
+    for cmd in commands:
+        if cmd.status == "PENDING":
+            cmd.status = "SENT"
+        parsed_payload = {}
+        if cmd.payload:
+            try:
+                parsed_payload = json.loads(cmd.payload)
+            except Exception:
+                pass
+        result.append({
+            "id": cmd.id,
+            "terminal_id": cmd.terminal_id,
+            "command": cmd.command,
+            "alert_id": cmd.alert_id,
+            "payload": parsed_payload,
+            "created_at": _utc_isoformat(cmd.created_at) if cmd.created_at else None,
+        })
+    if commands:
+        db.commit()
+    return result
+
+
+@app.post("/api/collector/commands/{command_id}/ack")
+async def ack_collector_command(
+    command_id: int,
+    body: CommandAckRequest,
+    x_collector_secret: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    if x_collector_secret != settings.collector_secret:
+        raise HTTPException(status_code=403, detail="Invalid collector secret")
+
+    cmd = db.get(RemoteCommand, command_id)
+    if not cmd:
+        raise HTTPException(status_code=404, detail="Command not found")
+
+    now_utc = datetime.now(timezone.utc)
+    cmd.status = body.status
+    cmd.result_message = body.message
+    cmd.executed_at = now_utc
+    db.commit()
+
+    logger.info("[COMMAND ACK] Command #%d (%s on %s): %s - %s", cmd.id, cmd.command, cmd.terminal_id, cmd.status, cmd.result_message)
+
+    await manager.broadcast({
+        "type": "COMMAND_ACK",
+        "command_id": cmd.id,
+        "terminal_id": cmd.terminal_id,
+        "command": cmd.command,
+        "status": cmd.status,
+        "message": cmd.result_message,
+        "alert_id": cmd.alert_id,
+        "executed_at": _utc_isoformat(now_utc),
+    })
+
+    return {"ok": True, "command_id": cmd.id, "status": cmd.status}
+
+
+@app.get("/api/commands")
+async def list_commands(
+    limit: int = Query(20, le=100),
+    db: Session = Depends(get_db),
+):
+    stmt = select(RemoteCommand).order_by(RemoteCommand.created_at.desc()).limit(limit)
+    cmds = db.execute(stmt).scalars().all()
+    return [
+        {
+            "id": c.id,
+            "terminal_id": c.terminal_id,
+            "command": c.command,
+            "alert_id": c.alert_id,
+            "status": c.status,
+            "result_message": c.result_message,
+            "created_at": _utc_isoformat(c.created_at) if c.created_at else None,
+            "executed_at": _utc_isoformat(c.executed_at) if c.executed_at else None,
+        }
+        for c in cmds
+    ]
+
+
+@app.post("/api/computers/{terminal_id}/command")
+async def execute_computer_command(
+    terminal_id: str,
+    body: dict,
+    db: Session = Depends(get_db),
+):
+    action = (body.get("command") or "").lower().strip()
+    if action not in ("shutdown", "lock_screen"):
+        raise HTTPException(status_code=400, detail="Command must be 'shutdown' or 'lock_screen'")
+    now_utc = datetime.now(timezone.utc)
+    cmd = RemoteCommand(
+        terminal_id=terminal_id,
+        command=action,
+        status="PENDING",
+        payload=json.dumps({"reason": body.get("reason") or "Direct admin command from computer inventory"}),
+        created_at=now_utc,
+    )
+    db.add(cmd)
+    db.commit()
+    db.refresh(cmd)
+    action_label = "Shutdown" if action == "shutdown" else "Lock Screen"
+    await manager.broadcast({
+        "type": "COMMAND_DISPATCHED",
+        "command_id": cmd.id,
+        "terminal_id": terminal_id,
+        "command": action,
+        "message": f"Remote {action_label} command dispatched to {terminal_id}",
+        "timestamp": _utc_isoformat(now_utc),
+    })
+    return {"ok": True, "command_id": cmd.id, "terminal_id": terminal_id, "command": action}
+
 
 
 @app.get("/api/stats", response_model=StatsResponse)
@@ -608,6 +912,22 @@ async def get_stats(db: Session = Depends(get_db)):
         active_incidents=active_alerts,
         resolved_incidents=resolved_incidents,
     )
+
+
+# ── Lab Hours endpoints ───────────────────────────────────────────────────────
+@app.get("/api/lab-hours", response_model=LabHoursResponse)
+async def get_lab_hours():
+    return detection.get_lab_hours()
+
+
+@app.post("/api/lab-hours", response_model=LabHoursResponse)
+async def update_lab_hours(body: LabHoursRequest):
+    updated = detection.set_lab_hours(body.start_time, body.end_time)
+    await manager.broadcast({
+        "type": "LAB_HOURS_UPDATED",
+        "lab_hours": updated,
+    })
+    return updated
 
 
 # ── Laboratories endpoints ───────────────────────────────────────────────────

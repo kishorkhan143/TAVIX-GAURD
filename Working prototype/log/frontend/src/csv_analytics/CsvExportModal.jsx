@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BACKEND_URL } from '../useAuthSentinel';
+import ModalPortal from '../components/ModalPortal';
 
 export default function CsvExportModal({ importId, onClose }) {
   const [exportType, setExportType] = useState('alerts');
@@ -33,7 +34,8 @@ export default function CsvExportModal({ importId, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <ModalPortal>
+      <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-dialog" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Export Analysis Report</h3>
@@ -126,5 +128,6 @@ export default function CsvExportModal({ importId, onClose }) {
         </div>
       </div>
     </div>
-  );
+  </ModalPortal>
+);
 }

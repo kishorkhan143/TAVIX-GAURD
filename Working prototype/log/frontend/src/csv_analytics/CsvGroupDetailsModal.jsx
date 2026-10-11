@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BACKEND_URL, parseUtc } from '../useAuthSentinel';
+import ModalPortal from '../components/ModalPortal';
 
 export default function CsvGroupDetailsModal({ group, dimension, importId, onClose }) {
   const [records, setRecords] = useState([]);
@@ -40,8 +41,9 @@ export default function CsvGroupDetailsModal({ group, dimension, importId, onClo
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-dialog" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+    <ModalPortal>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal-dialog" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span className={`severity-pill ${normalizedRisk}`}>{normalizedRisk}</span>
@@ -172,5 +174,6 @@ export default function CsvGroupDetailsModal({ group, dimension, importId, onClo
         </div>
       </div>
     </div>
-  );
+  </ModalPortal>
+);
 }

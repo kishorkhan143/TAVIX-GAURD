@@ -3,7 +3,7 @@ import LiveAlertModal from './LiveAlertModal';
 import CustomSelect from '../CustomSelect';
 import { formatDateTime } from '../../useAuthSentinel';
 
-export default function LiveAlertsView({ alerts, onUpdateStatus }) {
+export default function LiveAlertsView({ alerts, onUpdateStatus, onExecuteAction }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -200,6 +200,7 @@ export default function LiveAlertsView({ alerts, onUpdateStatus }) {
           alert={selectedAlert}
           onClose={() => setSelectedAlert(null)}
           onUpdateStatus={onUpdateStatus}
+          onExecuteAction={onExecuteAction}
         />
       )}
     </div>

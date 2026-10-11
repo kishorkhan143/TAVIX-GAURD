@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BACKEND_URL, parseUtc } from '../useAuthSentinel';
+import ModalPortal from '../components/ModalPortal';
 
 export default function CsvAlertDetailsModal({ alert, onClose, onStatusUpdated }) {
   const [currentStatus, setCurrentStatus] = useState(alert?.status || 'OPEN');
@@ -144,81 +145,83 @@ export default function CsvAlertDetailsModal({ alert, onClose, onStatusUpdated }
   ];
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal-dialog alert-modal-dialog"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '560px' }}
-      >
-        {/* Header */}
-        <div className="modal-header alert-modal-header">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div className="alert-modal-title-row">
-              <span className={`severity-pill ${alert.severity || 'CRITICAL'}`}>
-                {alert.severity ? alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1).toLowerCase() : 'Critical'}
-              </span>
-              <h3 className="alert-modal-title">{formatAlertTitle(alert.type || alert.title)}</h3>
-            </div>
-            <div className="alert-modal-id-line">
-              Alert ID: {alert.alert_id}
-            </div>
-          </div>
-          <button className="modal-close-btn" onClick={onClose} aria-label="Close modal">
-            ✕
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="modal-body alert-modal-body">
-          {/* Details Table */}
-          <div className="alert-details-table">
-            {detailRows.map((row, idx) => (
-              <div key={idx} className="alert-details-row">
-                <div className="alert-details-label">{row.label}</div>
-                <div className="alert-details-value">{row.value}</div>
+    <ModalPortal>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div
+          className="modal-dialog alert-modal-dialog"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '560px' }}
+        >
+          {/* Header */}
+          <div className="modal-header alert-modal-header">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div className="alert-modal-title-row">
+                <span className={`severity-pill ${alert.severity || 'CRITICAL'}`}>
+                  {alert.severity ? alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1).toLowerCase() : 'Critical'}
+                </span>
+                <h3 className="alert-modal-title">{formatAlertTitle(alert.type || alert.title)}</h3>
               </div>
-            ))}
+              <div className="alert-modal-id-line">
+                Alert ID: {alert.alert_id}
+              </div>
+            </div>
+            <button className="modal-close-btn" onClick={onClose} aria-label="Close modal">
+              ✕
+            </button>
           </div>
 
-          {/* Incident Summary */}
-          {alert.message && (
-            <div className="alert-incident-summary">
-              {alert.message}
+          {/* Body */}
+          <div className="modal-body alert-modal-body">
+            {/* Details Table */}
+            <div className="alert-details-table">
+              {detailRows.map((row, idx) => (
+                <div key={idx} className="alert-details-row">
+                  <div className="alert-details-label">{row.label}</div>
+                  <div className="alert-details-value">{row.value}</div>
+                </div>
+              ))}
             </div>
-          )}
 
-          {/* Why this was flagged */}
-          {flaggedBullets.length > 0 && (
-            <div className="alert-flagged-section">
-              <h4 className="alert-flagged-heading">Why this was flagged</h4>
-              <ul className="alert-flagged-list">
-                {flaggedBullets.map((bullet, idx) => (
-                  <li key={idx}>{bullet}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+            {/* Incident Summary */}
+            {alert.message && (
+              <div className="alert-incident-summary">
+                {alert.message}
+              </div>
+            )}
 
-          {updateError && (
-            <div className="alert-modal-error">
-              {updateError}
-            </div>
-          )}
-        </div>
+            {/* Why this was flagged */}
+            {flaggedBullets.length > 0 && (
+              <div className="alert-flagged-section">
+                <h4 className="alert-flagged-heading">Why this was flagged</h4>
+                <ul className="alert-flagged-list">
+                  {flaggedBullets.map((bullet, idx) => (
+                    <li key={idx}>{bullet}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-        {/* Footer */}
-        <div className="modal-footer alert-modal-footer">
-          <div className="alert-modal-status-group">
-            <span className="alert-status-label">Status:</span>
-            <span className={`status-pill ${currentStatus}`}>
-              {currentStatus ? currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1).toLowerCase() : 'Open'}
-            </span>
+            {updateError && (
+              <div className="alert-modal-error">
+                {updateError}
+              </div>
+            )}
           </div>
 
-          <div className="alert-modal-actions">
+          {/* Footer */}
+          <div className="modal-footer alert-modal-footer">
+            <div className="alert-modal-status-group">
+              <span className="alert-status-label">Status:</span>
+              <span className={`status-pill ${currentStatus}`}>
+                {currentStatus ? currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1).toLowerCase() : 'Open'}
+              </span>
+            </div>
+
+            <div className="alert-modal-actions">
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }

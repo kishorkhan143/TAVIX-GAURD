@@ -7,7 +7,7 @@ import CsvAlertsExplorer from './CsvAlertsExplorer';
 import PageTransition from '../components/PageTransition';
 
 export default function CsvAnalyticsPage() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('groups');
   const [currentImportId, setCurrentImportId] = useState(null);
   const [summaryData, setSummaryData] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -135,10 +135,10 @@ export default function CsvAnalyticsPage() {
       <div className="csv-tabs-nav">
         <button
           type="button"
-          className={`csv-tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => setActiveTab('dashboard')}
+          className={`csv-tab-btn ${activeTab === 'groups' ? 'active' : ''}`}
+          onClick={() => setActiveTab('groups')}
         >
-          <span>Dashboard & Charts</span>
+          <span>Grouped Dimensions</span>
         </button>
 
         <button
@@ -154,10 +154,10 @@ export default function CsvAnalyticsPage() {
 
         <button
           type="button"
-          className={`csv-tab-btn ${activeTab === 'groups' ? 'active' : ''}`}
-          onClick={() => setActiveTab('groups')}
+          className={`csv-tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => setActiveTab('dashboard')}
         >
-          <span>Grouped Dimensions</span>
+          <span>Dashboard & Charts</span>
         </button>
       </div>
 

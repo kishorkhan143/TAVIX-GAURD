@@ -62,6 +62,14 @@ class Settings(BaseSettings):
         description="Shared secret sent in X-Collector-Secret header",
     )
 
+    # ── SMTP Configuration ──────────────────────────────────────────────────
+    smtp_host: str = Field("smtp.gmail.com", description="SMTP server hostname")
+    smtp_port: int = Field(587, description="SMTP server port")
+    smtp_user: str = Field("kishorkhan.dev@gmail.com", description="SMTP username / sender")
+    smtp_password: str = Field("rinv jjhh yxnh hyas", description="SMTP app password")
+    smtp_from_name: str = Field("TAVIX GUARD SOC", description="SMTP sender display name")
+    default_admin_email: str = Field("kishorkhan.dev@gmail.com", description="Default admin alert recipient")
+
     model_config = {"env_file": ".env", "env_prefix": "AS_", "extra": "ignore"}
 
     @field_validator("database_url")

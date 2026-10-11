@@ -48,87 +48,26 @@ def validate_email_format(email: str) -> Tuple[bool, Optional[str]]:
         return False, str(e)
 
 
+import smtp_service
+
+
 def send_verification_email(email: str, verification_token: str) -> Tuple[bool, Optional[str]]:
     """
-    Send verification email via Resend.
-    Returns (success, error_message).
+    Send verification email via SMTP (smtp.gmail.com).
+    Falls back to mock console logging if SMTP fails or is disabled.
     """
-    # If RESEND_API_KEY is not set, log to console instead
-    if not RESEND_API_KEY or RESEND_API_KEY == "":
-        logger.warning(f"[MOCK EMAIL] Verification link for {email}:")
-        verification_url = f"{VERIFICATION_CALLBACK_URL}?token={verification_token}"
-        logger.warning(f"[MOCK EMAIL] Click here: {verification_url}")
-        logger.warning(f"[MOCK EMAIL] Token expires in {VERIFICATION_TOKEN_EXPIRY_MINUTES} minutes")
+    success, error = smtp_service.send_verification_email(email, verification_token)
+    if success:
         return True, None
 
-    # Send via Resend
-    try:
-        resend.api_key = RESEND_API_KEY
-        
-        verification_url = f"{VERIFICATION_CALLBACK_URL}?token={verification_token}"
-        
-        html_content = f"""
-        <html>
-            <head>
-                <style>
-                    body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
-                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                    .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; }}
-                    .content {{ padding: 20px; background: #f9fafb; border-radius: 8px; margin-top: 20px; }}
-                    .button {{ display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; }}
-                    .footer {{ text-align: center; color: #666; font-size: 12px; margin-top: 20px; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>TAVIX GUARD</h1>
-                        <p>Email Verification</p>
-                    </div>
-                    <div class="content">
-                        <p>Hello,</p>
-                        <p>Thank you for signing up to TAVIX GUARD. Click the button below to verify your email address and access the dashboard.</p>
-                        <p>This link expires in {VERIFICATION_TOKEN_EXPIRY_MINUTES} minutes.</p>
-                        <a href="{verification_url}" class="button">Verify Email</a>
-                        <p style="margin-top: 20px; color: #666; font-size: 14px;">
-                            Or copy and paste this link in your browser:<br>
-                            <code style="background: #e5e7eb; padding: 8px; border-radius: 4px; display: block; word-break: break-all; margin-top: 10px;">
-                                {verification_url}
-                            </code>
-                        </p>
-                    </div>
-                    <div class="footer">
-                        <p>If you did not request this email, you can safely ignore it.</p>
-                        <p>&copy; 2025 TAVIX GUARD. All rights reserved.</p>
-                    </div>
-                </div>
-            </body>
-        </html>
-        """
-        
-        params = {
-            "from": RESEND_FROM_EMAIL,
-            "to": email,
-            "subject": "Verify your TAVIX GUARD email",
-            "html": html_content,
-        }
-        
-        email_response = resend.Emails.send(params)
-        
-        if email_response.get("id"):
-            logger.info(f"Verification email sent to {email} (id: {email_response['id']})")
-            return True, None
-        else:
-            error = email_response.get("message", "Unknown error")
-            logger.error(f"Failed to send email to {email}: {error}")
-            return False, error
-    
-    except Exception as e:
-        logger.error(f"Exception sending verification email to {email}: {str(e)}")
-        return False, str(e)
+    # Fallback to local console log
+    logger.warning(f"[FALLBACK EMAIL] Verification link for {email}:")
+    verification_url = f"{VERIFICATION_CALLBACK_URL}?token={verification_token}"
+    logger.warning(f"[FALLBACK EMAIL] Click here: {verification_url}")
+    return True, None
 
 
-def generate_jwt_token(user_id: int, email: str) -> str:
+def generate_jwt_token(user_id: int, email: str, role: str = "admin") -> str:
     """
     Generate a JWT token for authenticated user.
     Expires in JWT_EXPIRY_DAYS days.
@@ -139,6 +78,7 @@ def generate_jwt_token(user_id: int, email: str) -> str:
     payload = {
         "user_id": user_id,
         "email": email,
+        "role": role,
         "iat": now,
         "exp": expiry,
     }

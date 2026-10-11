@@ -117,14 +117,15 @@ button:not(:disabled),
 
 /* ── 7. Modals & Overlays — NO CSS animation; motion handles entrance/exit  */
 .modal-backdrop {
-  background: rgba(15, 23, 42, 0.42) !important;
-  /* opacity is handled by motion backdropFade variant */
+  background: rgba(255, 255, 255, 0.68) !important;
+  backdrop-filter: blur(18px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
 }
 
 .modal-dialog {
-  /* NO animation here; motion sheet spring handles it */
-  transform-origin: center center;
-  box-shadow: var(--ios-shadow-modal) !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 20px 48px -10px rgba(15, 23, 42, 0.16) !important;
 }
 
 .modal-close-btn {

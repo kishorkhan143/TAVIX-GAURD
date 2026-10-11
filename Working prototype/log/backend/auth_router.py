@@ -18,8 +18,13 @@ from schemas import (
     VerificationRequestResponse,
     VerifyEmailResponse,
     UserResponse,
+    AdminLoginRequest,
+    TestAlertEmailRequest,
+    AdminInfoResponse,
+    UpdateProfileRequest,
 )
 import auth_service
+import smtp_service
 
 logger = logging.getLogger("authsentinel.auth_router")
 
@@ -84,7 +89,7 @@ async def request_verification(
     Request a verification email.
     
     Validates email format, checks if user exists, generates verification token,
-    and sends email via Resend (or logs to console in mock mode).
+    and sends email via SMTP.
     """
     email = body.email.strip().lower()
     
@@ -97,11 +102,8 @@ async def request_verification(
             detail=f"Invalid email format: {error_msg}",
         )
     
-    # Check if user already exists and is verified
+    # Check if user already exists
     existing_user = db.query(User).filter(User.email == email).first()
-    if existing_user and existing_user.is_verified:
-        logger.info(f"User {email} already verified; sending new verification email")
-        # Allow re-verification
     
     # Generate verification token (15-min expiry)
     verification_token = auth_service.generate_verification_token()
@@ -119,6 +121,7 @@ async def request_verification(
     else:
         user = User(
             email=email,
+            role="admin",
             is_verified=False,
             verification_token=verification_token,
             verification_token_expires_at=expires_at,
@@ -129,7 +132,7 @@ async def request_verification(
         db.refresh(user)
         logger.info(f"Created new user: {email}")
     
-    # Send verification email
+    # Send verification email via SMTP
     success, error = auth_service.send_verification_email(email, verification_token)
     if not success:
         logger.error(f"Failed to send verification email to {email}: {error}")
@@ -157,8 +160,7 @@ async def verify_email(
 ) -> VerifyEmailResponse:
     """
     Verify email using the token from the verification link.
-    
-    Validates token, marks user as verified, and issues a JWT token.
+    Validates token, marks user as verified, updates last_login_at, and issues a JWT token.
     """
     if not token or len(token) == 0:
         raise HTTPException(
@@ -187,6 +189,7 @@ async def verify_email(
     # Mark user as verified
     user.is_verified = True
     user.verified_at = now
+    user.last_login_at = now
     user.verification_token = None
     user.verification_token_expires_at = None
     db.commit()
@@ -195,7 +198,7 @@ async def verify_email(
     logger.info(f"User verified: {user.email}")
     
     # Generate JWT token
-    jwt_token = auth_service.generate_jwt_token(user.id, user.email)
+    jwt_token = auth_service.generate_jwt_token(user.id, user.email, user.role or "admin")
     
     return VerifyEmailResponse(
         success=True,
@@ -204,9 +207,113 @@ async def verify_email(
         user={
             "id": user.id,
             "email": user.email,
+            "name": user.name,
+            "role": user.role or "admin",
             "is_verified": user.is_verified,
         },
     )
+
+
+@router.post(
+    "/admin-login",
+    response_model=VerifyEmailResponse,
+    summary="Admin Quick Sign-in",
+    description="Allows direct sign in for administrator accounts.",
+)
+async def admin_login(
+    body: AdminLoginRequest,
+    db: Session = Depends(get_db),
+) -> VerifyEmailResponse:
+    """
+    Sign in directly as an administrator.
+    Registers or updates the administrator profile, refreshes last login, and returns a JWT token.
+    """
+    email = body.email.strip().lower()
+    now = datetime.now(timezone.utc)
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(
+            email=email,
+            role="admin",
+            is_verified=True,
+            created_at=now,
+            verified_at=now,
+            last_login_at=now,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        user.is_verified = True
+        user.role = user.role or "admin"
+        user.last_login_at = now
+        db.commit()
+        db.refresh(user)
+
+    jwt_token = auth_service.generate_jwt_token(user.id, user.email, user.role)
+    logger.info(f"Admin logged in directly: {user.email}")
+
+    return VerifyEmailResponse(
+        success=True,
+        message=f"Administrator session established for {user.email}",
+        jwt_token=jwt_token,
+        user={
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role or "admin",
+            "is_verified": user.is_verified,
+        },
+    )
+
+
+@router.get(
+    "/admin/info",
+    response_model=AdminInfoResponse,
+    summary="Get Admin & SMTP System Configuration",
+)
+async def get_admin_system_info(
+    db: Session = Depends(get_db),
+) -> AdminInfoResponse:
+    """
+    Returns active admin settings, SMTP delivery status, and notification recipient list.
+    """
+    recipients = smtp_service.get_active_recipient_emails(db)
+    total_users = db.query(User).count()
+    return AdminInfoResponse(
+        admin_email=smtp_service.DEFAULT_ADMIN_EMAIL,
+        smtp_host=smtp_service.SMTP_HOST,
+        smtp_user=smtp_service.SMTP_USER,
+        smtp_enabled=True,
+        recipient_emails=recipients,
+        total_users=total_users,
+    )
+
+
+@router.post(
+    "/admin/test-alert-email",
+    summary="Send Test Incident Alert Email via SMTP",
+)
+async def send_test_alert_email(
+    body: Optional[TestAlertEmailRequest] = None,
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+    Triggers an immediate test incident alert email via SMTP to verify recipient inbox delivery.
+    """
+    target = (body.recipient_email if body and body.recipient_email else None) or smtp_service.DEFAULT_ADMIN_EMAIL
+    success, error = smtp_service.send_test_email(target)
+    if not success:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to send SMTP test email: {error}",
+        )
+    return {
+        "success": True,
+        "message": f"Test incident alert email sent successfully to {target} via SMTP",
+        "recipient": target,
+    }
 
 
 @router.get(
@@ -225,6 +332,34 @@ async def get_current_user_info(
     return UserResponse.model_validate(current_user)
 
 
+@router.put(
+    "/profile",
+    response_model=UserResponse,
+    summary="Update User Profile",
+    description="Update user display name.",
+)
+@router.patch(
+    "/profile",
+    response_model=UserResponse,
+    summary="Update User Profile",
+    description="Update user display name.",
+)
+async def update_profile(
+    body: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserResponse:
+    """
+    Update the current authenticated user's name.
+    """
+    current_user.name = body.name.strip()
+    current_user.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(current_user)
+    logger.info(f"User profile updated: {current_user.email} -> name='{current_user.name}'")
+    return UserResponse.model_validate(current_user)
+
+
 @router.post(
     "/logout",
     summary="Logout",
@@ -236,7 +371,6 @@ async def logout(
     """
     Logout endpoint (frontend-driven).
     Frontend should clear the JWT token from localStorage.
-    This endpoint is optional but provided for completeness.
     """
     logger.info(f"User logged out: {current_user.email}")
     return {

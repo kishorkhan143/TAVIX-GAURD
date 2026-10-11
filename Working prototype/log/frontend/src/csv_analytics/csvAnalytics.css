@@ -416,9 +416,9 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.42);
-  backdrop-filter: blur(14px) saturate(180%);
-  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -428,10 +428,10 @@
 }
 
 .modal-dialog {
-  background: var(--bg-card);
-  border-radius: var(--radius-2xl);
+  background: var(--bg-card, #ffffff);
+  border-radius: 18px;
   border: 1px solid var(--border-light);
-  box-shadow: var(--ios-shadow-modal);
+  box-shadow: 0 20px 48px -10px rgba(15, 23, 42, 0.16);
   width: 100%;
   max-width: 680px;
   max-height: 90vh;

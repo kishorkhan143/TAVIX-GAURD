@@ -1,11 +1,13 @@
 import React from 'react';
 import { formatDateTime } from '../../useAuthSentinel';
+import ModalPortal from '../ModalPortal';
 
 export default function LiveGroupDetailsModal({ group, onClose }) {
   if (!group) return null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <ModalPortal>
+      <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-dialog" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '720px' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -151,5 +153,6 @@ export default function LiveGroupDetailsModal({ group, onClose }) {
         </div>
       </div>
     </div>
-  );
+  </ModalPortal>
+);
 }
