@@ -482,7 +482,6 @@ function LiveTelemetrySection({ events, alerts, onExecuteAction, onSelectAlert }
       <div className="section-header incidents-page-header">
         <div>
           <h2 className="incidents-heading">Incidents</h2>
-          <p className="incidents-subheading">Authentication events and detected security incidents</p>
         </div>
         <div className="incidents-header-actions">
           {!isToday && (
@@ -1349,7 +1348,7 @@ export default function Dashboard({ user, token, onLogout, onUpdateUser }) {
             isSidebarOpen={isSidebarOpen}
           />
           
-          <div className={`body ${activeMenu === 'overview' ? 'overview-mode' : ''} ${activeMenu === 'terminals' ? 'terminals-mode' : ''} ${activeMenu === 'csv' ? 'csv-mode' : ''}`}>
+          <div className={`body ${activeMenu === 'overview' ? 'overview-mode' : ''} ${activeMenu === 'terminals' ? 'terminals-mode' : ''} ${activeMenu === 'csv' ? 'csv-mode' : ''} ${activeMenu === 'live' ? 'incidents-mode' : ''}`}>
             <PageTransition transitionKey={`${activeMenu}-${selectedLab?.id || ''}-${selectedComputer?.terminal_id || ''}`}>
               {activeMenu === 'overview' && (
                 <OverviewSection
