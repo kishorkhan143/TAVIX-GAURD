@@ -89,7 +89,10 @@ logger = logging.getLogger("authsentinel.backend")
 _start_time = time.monotonic()
 COLLECTOR_STALE_SECONDS = 45
 COLLECTOR_HEARTBEAT_INTERVAL_SECONDS = 15
-LOCAL_TIMEZONE = ZoneInfo("Asia/Kolkata")
+try:
+    LOCAL_TIMEZONE = ZoneInfo("Asia/Kolkata")
+except Exception:
+    LOCAL_TIMEZONE = timezone(timedelta(hours=5, minutes=30))
 # Track each collector by label (LAPTOP-A, LAPTOP-B, …)
 _collectors: dict[str, dict] = {}
 

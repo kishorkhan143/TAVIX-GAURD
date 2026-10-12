@@ -72,6 +72,12 @@ def init_db() -> None:
                 "ON auth_events (source_host, raw_record_id)"
             )
         )
+        try:
+            rc_cols = [row[1] for row in connection.execute(text("PRAGMA table_info(remote_commands)")).fetchall()]
+            if rc_cols and "terminal_id" not in rc_cols:
+                connection.execute(text("DROP TABLE IF EXISTS remote_commands"))
+        except Exception:
+            pass
         connection.execute(
             text(
                 "CREATE TABLE IF NOT EXISTS remote_commands ("
