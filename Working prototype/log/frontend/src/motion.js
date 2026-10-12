@@ -1,5 +1,5 @@
-/**
- * src/motion.js — Central motion configuration
+ï»¿/**
+ * src/motion.js ï¿½ Central motion configuration
  * Single source of truth for springs, ease curves, timing, and animation variants.
  * Exported for use throughout the app; imported from "motion/react".
  * Updated: iOS-like smoothness with delays
@@ -12,7 +12,7 @@ import React from 'react';
 // -------------------------------------------------------------------------
 
 export const springs = {
-  // Large surfaces, page transitions, big panels — ultra smooth, weighted settle
+  // Large surfaces, page transitions, big panels ï¿½ ultra smooth, weighted settle
   soft: {
     type: 'spring',
     stiffness: 220,
@@ -20,7 +20,7 @@ export const springs = {
     mass: 1.2,
   },
 
-  // Buttons, toggles, tabs, pills — responsive, snappy feedback
+  // Buttons, toggles, tabs, pills ï¿½ responsive, snappy feedback
   snappy: {
     type: 'spring',
     stiffness: 380,
@@ -28,7 +28,7 @@ export const springs = {
     mass: 0.8,
   },
 
-  // Modals, popovers, sheets — medium responsiveness
+  // Modals, popovers, sheets ï¿½ medium responsiveness
   sheet: {
     type: 'spring',
     stiffness: 280,
@@ -68,7 +68,7 @@ export const scrollRevealConfig = {
 // -------------------------------------------------------------------------
 
 export const variants = {
-  // Fade in + slight scale + blur — used for cards, list items, content blocks
+  // Fade in + slight scale + blur ï¿½ used for cards, list items, content blocks
   fadeUp: {
     hidden: {
       opacity: 0,

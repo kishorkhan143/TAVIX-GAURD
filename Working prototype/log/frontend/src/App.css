@@ -2681,3 +2681,52 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
 }
 
 
+/* Anomaly detection alert styling */
+.alert-badge-anomaly {
+  background: #8b5cf6;  /* Purple for anomalies */
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.alert-badge-rule {
+  background: #ef4444;  /* Red for rule-based */
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Alert type specific colors */
+.alert-type-FAILURE_VELOCITY {
+  border-left: 4px solid #8b5cf6;
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.alert-type-SUCCESS_ANOMALY {
+  border-left: 4px solid #a78bfa;
+  background: rgba(167, 139, 250, 0.08);
+}
+
+.alert-type-BURST_DETECTED {
+  border-left: 4px solid #c4b5fd;
+  background: rgba(196, 181, 253, 0.08);
+}
+
+.anomaly-reason {
+  color: #7c3aed;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(124, 58, 237, 0.05);
+  border-radius: 6px;
+  border-left: 3px solid #7c3aed;
+}
