@@ -404,6 +404,112 @@
   background: #1e293b;
 }
 
+/* ── Security Alerts Fixed Layout & Scrollable Table ────────── */
+.csv-alerts-explorer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden !important;
+  gap: 14px;
+}
+
+.csv-alerts-table-container {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto !important;
+  overflow-x: auto;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-light, #e2e8f0);
+  border-radius: var(--radius-xl, 14px);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
+  scrollbar-width: thin;
+  position: relative;
+}
+
+.csv-alerts-table-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.csv-alerts-table-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.csv-alerts-table-container::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 999px;
+}
+
+.csv-alerts-table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+  font-size: 13px;
+}
+
+.csv-alerts-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.csv-alerts-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f8fafc;
+  color: var(--text-secondary, #475569);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-light, #e2e8f0);
+  white-space: nowrap;
+  box-shadow: 0 1px 0 var(--border-light, #e2e8f0);
+  user-select: none;
+}
+
+[data-theme="dark"] .csv-alerts-table thead th {
+  background: #1e293b;
+  color: #94a3b8;
+  border-bottom-color: #334155;
+  box-shadow: 0 1px 0 #334155;
+}
+
+.csv-alerts-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-light, #e2e8f0);
+  color: var(--text-primary);
+  vertical-align: middle;
+  background: var(--bg-card, #ffffff);
+}
+
+[data-theme="dark"] .csv-alerts-table td {
+  background: #111827;
+  border-bottom-color: #1f2937;
+}
+
+.csv-alerts-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.csv-alerts-table tbody tr {
+  transition: background-color var(--ios-duration-fast, 0.15s) var(--ios-ease, ease);
+}
+
+.csv-alerts-table tbody tr:hover td {
+  background: var(--bg-secondary, #f8fafc);
+}
+
+[data-theme="dark"] .csv-alerts-table tbody tr:hover td {
+  background: #1e293b;
+}
+
 /* ── Data Tables ─────────────────────────────────────────────── */
 .data-table-container {
   background: var(--bg-card);

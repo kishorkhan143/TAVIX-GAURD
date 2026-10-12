@@ -53,7 +53,7 @@ export default function CsvAlertsExplorer({ importId }) {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="csv-alerts-explorer">
       {/* Filters Bar */}
       <div className="grouping-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
@@ -101,8 +101,8 @@ export default function CsvAlertsExplorer({ importId }) {
       </div>
 
       {/* Security Alerts Table: User | Source IP | Count | Attack / Alert Type | Risk Level | Action */}
-      <div className="data-table-container">
-        <table className="data-table">
+      <div className="csv-alerts-table-container">
+        <table className="csv-alerts-table data-table">
           <thead>
             <tr>
               <th>User</th>
