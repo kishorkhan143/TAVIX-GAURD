@@ -395,22 +395,21 @@ function OverviewSection({ events, alerts, onExecuteAction, onSelectAlert }) {
       animate="visible"
       exit="exit"
     >
-      <div className="section-header" style={{ marginBottom: !isToday ? '16px' : '0', minHeight: !isToday ? 'auto' : 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '12px' }}>
-          {!isToday && (
-            <motion.div
-              className="viewing-past-date-pill"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={springs.snappy}
-            >
-              <span>Viewing {displayDate}</span>
-              <button type="button" className="btn-back-to-live" onClick={resetToToday}>
-                Back to live
-              </button>
-            </motion.div>
-          )}
-        </div>
+      <div className="section-header overview-page-header">
+        <h2 className="overview-heading">Overview</h2>
+        {!isToday && (
+          <motion.div
+            className="viewing-past-date-pill"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={springs.snappy}
+          >
+            <span>Viewing {displayDate}</span>
+            <button type="button" className="btn-back-to-live" onClick={resetToToday}>
+              Back to live
+            </button>
+          </motion.div>
+        )}
       </div>
 
       <div className="stats-grid">
@@ -444,14 +443,8 @@ function OverviewSection({ events, alerts, onExecuteAction, onSelectAlert }) {
         ))}
       </div>
 
-      <motion.div
-        className="overview-bottom-row"
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={springs.soft}
-        viewport={{ once: true, margin: '-40px' }}
-      >
-        {/* Left: Recent Events panel */}
+      <div className="overview-bottom-row">
+        {/* Full-width Recent Events panel */}
         <div className="events-panel">
           <div className="panel-header">
             <h3>Recent Events</h3>
@@ -463,27 +456,7 @@ function OverviewSection({ events, alerts, onExecuteAction, onSelectAlert }) {
             recent
           />
         </div>
-
-      </motion.div>
-
-      <motion.div
-        className="alerts-panel"
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={springs.soft}
-        viewport={{ once: true, margin: '-40px' }}
-      >
-        <div className="panel-header">
-          <h3>Active Alerts</h3>
-          <span className="badge alert">{activeFilteredAlerts.length}</span>
-        </div>
-        <AlertList
-          alerts={activeFilteredAlerts}
-          emptyMessage={`No incidents on ${displayDate}`}
-          onExecuteAction={onExecuteAction}
-          onSelectAlert={onSelectAlert}
-        />
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -1376,7 +1349,7 @@ export default function Dashboard({ user, token, onLogout, onUpdateUser }) {
             isSidebarOpen={isSidebarOpen}
           />
           
-          <div className="body">
+          <div className={`body ${activeMenu === 'overview' ? 'overview-mode' : ''}`}>
             <PageTransition transitionKey={`${activeMenu}-${selectedLab?.id || ''}-${selectedComputer?.terminal_id || ''}`}>
               {activeMenu === 'overview' && (
                 <OverviewSection
