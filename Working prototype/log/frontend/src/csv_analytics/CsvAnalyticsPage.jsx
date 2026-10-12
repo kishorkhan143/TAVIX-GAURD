@@ -166,7 +166,7 @@ export default function CsvAnalyticsPage() {
         {activeTab === 'dashboard' && (
           <>
             {summaryData ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className="csv-dashboard-charts-container">
                 <CsvAnalyticsCharts summary={summaryData} />
               </div>
             ) : (
