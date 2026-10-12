@@ -1349,7 +1349,7 @@ export default function Dashboard({ user, token, onLogout, onUpdateUser }) {
             isSidebarOpen={isSidebarOpen}
           />
           
-          <div className={`body ${activeMenu === 'overview' ? 'overview-mode' : ''} ${activeMenu === 'terminals' ? 'terminals-mode' : ''}`}>
+          <div className={`body ${activeMenu === 'overview' ? 'overview-mode' : ''} ${activeMenu === 'terminals' ? 'terminals-mode' : ''} ${activeMenu === 'csv' ? 'csv-mode' : ''}`}>
             <PageTransition transitionKey={`${activeMenu}-${selectedLab?.id || ''}-${selectedComputer?.terminal_id || ''}`}>
               {activeMenu === 'overview' && (
                 <OverviewSection

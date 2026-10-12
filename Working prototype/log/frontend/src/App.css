@@ -484,6 +484,9 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
 
 .body.overview-mode,
 .body.terminals-mode,
+.body.csv-mode,
+.body:has(.csv-analytics-container),
+.body:has(.csv-groups-explorer),
 .body:has(.lab-terminals-view) {
   overflow: hidden !important;
   overflow-y: hidden !important;
