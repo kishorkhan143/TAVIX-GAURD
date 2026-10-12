@@ -109,31 +109,33 @@
   font-weight: 600;
 }
 
-/* ── Navigation Tabs (Clean, No Icons) ───────────────────────── */
+/* ── Navigation Tabs (Clean, Animated Moving Underline) ───────── */
 .csv-tabs-nav {
   display: flex;
   gap: 8px;
   border-bottom: 1px solid var(--border-light);
-  padding-bottom: 2px;
+  padding-bottom: 0;
   overflow-x: auto;
   flex-shrink: 0;
+  position: relative;
 }
 
 .csv-tab-btn {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 10px 18px 12px 18px;
   background: transparent;
   border: none;
-  border-bottom: 2px solid transparent;
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
   white-space: nowrap;
-  transition: all var(--ios-duration-fast) var(--ios-ease);
+  transition: color 0.2s ease, background-color 0.25s ease;
+  user-select: none;
 }
 
 .csv-tab-btn:hover {
@@ -142,14 +144,26 @@
 }
 
 .csv-tab-btn:active {
-  transform: scale(0.975);
+  transform: scale(0.98);
 }
 
 .csv-tab-btn.active {
   color: var(--accent);
-  background: var(--accent-faint);
-  border-bottom-color: var(--accent);
+  background: var(--accent-faint, rgba(0, 102, 255, 0.06));
   font-weight: 600;
+}
+
+.csv-tab-active-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: var(--accent, #0066ff);
+  border-radius: 2px 2px 0 0;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 102, 255, 0.3);
+  pointer-events: none;
 }
 
 .csv-tab-badge {
@@ -159,11 +173,60 @@
   border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .csv-tab-btn.active .csv-tab-badge {
   background: var(--accent-light);
   color: var(--accent);
+}
+
+/* ── Tab Content Panes & Subtle Fade-in Transition ───────────── */
+.csv-tab-content-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.csv-tab-pane {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.csv-tab-pane.active {
+  display: flex;
+  animation: csvTabContentFadeIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes csvTabContentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .csv-tab-btn {
+    transition: none !important;
+  }
+  .csv-tab-pane.active {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 /* ── Empty State ─────────────────────────────────────────────── */
