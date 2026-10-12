@@ -132,31 +132,29 @@ export function useAuthSentinel(selectedDate) {
 
   // ── Actions ──────────────────────────────────────────────────
   const updateAlertStatus = useCallback(async (alertId, newStatus) => {
-    // Optimistic UI update
-    setAlerts(prev =>
-      prev.map(a => (a.id === alertId ? { ...a, status: newStatus, resolved: newStatus === 'RESOLVED' || newStatus === 'AUTHORIZED' } : a))
-    );
     try {
       const res = await fetch(`${BACKEND_URL}/api/alerts/${alertId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) {
-        refreshStats();
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || `Failed to update alert status (${res.status})`);
       }
+      const data = await res.json();
+      setAlerts(prev =>
+        prev.map(a => (a.id === alertId ? { ...a, status: data.status, resolved: data.resolved } : a))
+      );
+      refreshStats();
+      return data;
     } catch (err) {
       console.warn('Failed to update alert status:', err);
+      throw err;
     }
   }, [refreshStats]);
 
   const executeAlertAction = useCallback(async (alertId, action, options = {}) => {
-    const optStatus = action === 'authorize' ? 'AUTHORIZED' : 'REMEDIATING';
-    // Optimistic UI update
-    setAlerts(prev =>
-      prev.map(a => (a.id === alertId ? { ...a, status: optStatus, resolved: true } : a))
-    );
-
     try {
       const res = await fetch(`${BACKEND_URL}/api/alerts/${alertId}/action`, {
         method: 'POST',
@@ -169,6 +167,17 @@ export function useAuthSentinel(selectedDate) {
       });
       if (res.ok) {
         const data = await res.json();
+        const alertStatus = action === 'authorize'
+          ? data.status
+          : data.alert_status || 'REMEDIATING';
+        const resolved = alertStatus === 'AUTHORIZED';
+        setAlerts(prev =>
+          prev.map(a => (
+            a.id === alertId
+              ? { ...a, status: alertStatus, resolved }
+              : a
+          ))
+        );
         refreshStats();
         return data;
       } else {
@@ -188,11 +197,13 @@ export function useAuthSentinel(selectedDate) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(labData),
       });
-      if (res.ok) {
-        const created = await res.json();
-        setLabs(prev => [created, ...prev]);
-        return created;
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || `Failed to create laboratory (${res.status})`);
       }
+      const created = await res.json();
+      setLabs(prev => [created, ...prev]);
+      return created;
     } catch (err) {
       console.warn('Failed to create laboratory:', err);
       throw err;
@@ -225,6 +236,8 @@ export function useAuthSentinel(selectedDate) {
         setLabHours(data);
         return data;
       }
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.detail || `Failed to update lab hours (${res.status})`);
     } catch (err) {
       console.warn('Failed to update lab hours:', err);
       throw err;
@@ -234,6 +247,7 @@ export function useAuthSentinel(selectedDate) {
   const assignTerminal = useCallback(async (terminalId, labId) => {
     // Optimistic UI update
     const selectedLab = labs.find(l => l.id === labId);
+    const previousTerminal = terminals.find(t => t.terminal_id === terminalId);
     setTerminals(prev =>
       prev.map(t =>
         t.terminal_id === terminalId
@@ -247,14 +261,24 @@ export function useAuthSentinel(selectedDate) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ terminal_id: terminalId, lab_id: labId }),
       });
-      if (res.ok) {
-        refreshLabs();
-        refreshTerminals();
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || `Failed to assign terminal to laboratory (${res.status})`);
       }
+      refreshLabs();
+      refreshTerminals();
     } catch (err) {
+      setTerminals(prev =>
+        prev.map(t =>
+          t.terminal_id === terminalId
+            ? { ...t, lab_id: previousTerminal?.lab_id || null, lab_name: previousTerminal?.lab_name || null }
+            : t
+        )
+      );
       console.warn('Failed to assign terminal:', err);
+      throw err;
     }
-  }, [labs, refreshLabs, refreshTerminals]);
+  }, [labs, refreshLabs, refreshTerminals, terminals]);
 
   const exportLiveTelemetry = useCallback(() => {
     if (!events.length) {
@@ -492,4 +516,3 @@ export function useAuthSentinel(selectedDate) {
 }
 
 export { BACKEND_URL };
-

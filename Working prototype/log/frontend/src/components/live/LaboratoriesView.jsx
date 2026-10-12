@@ -14,6 +14,7 @@ export default function LaboratoriesView({
   const [startTime, setStartTime] = useState(labHours?.start_time || '09:00');
   const [endTime, setEndTime] = useState(labHours?.end_time || '18:00');
   const [savedToast, setSavedToast] = useState(false);
+  const [hoursSaveError, setHoursSaveError] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -48,13 +49,16 @@ export default function LaboratoriesView({
   const handleStartTimeChange = async (e) => {
     const newStart = e.target.value;
     setStartTime(newStart);
+    setSavedToast(false);
+    setHoursSaveError('');
     if (onUpdateLabHours && newStart && endTime) {
       try {
         await onUpdateLabHours(newStart, endTime);
         setSavedToast(true);
         setTimeout(() => setSavedToast(false), 2000);
       } catch (err) {
-        console.error(err);
+        setStartTime(startTime);
+        setHoursSaveError(err instanceof Error ? err.message : 'Failed to save lab hours.');
       }
     }
   };
@@ -62,13 +66,16 @@ export default function LaboratoriesView({
   const handleEndTimeChange = async (e) => {
     const newEnd = e.target.value;
     setEndTime(newEnd);
+    setSavedToast(false);
+    setHoursSaveError('');
     if (onUpdateLabHours && startTime && newEnd) {
       try {
         await onUpdateLabHours(startTime, newEnd);
         setSavedToast(true);
         setTimeout(() => setSavedToast(false), 2000);
       } catch (err) {
-        console.error(err);
+        setEndTime(endTime);
+        setHoursSaveError(err instanceof Error ? err.message : 'Failed to save lab hours.');
       }
     }
   };
@@ -167,6 +174,11 @@ export default function LaboratoriesView({
             {savedToast && (
               <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 600, marginLeft: '2px' }}>
                 ✓ Saved
+              </span>
+            )}
+            {hoursSaveError && (
+              <span role="alert" style={{ fontSize: '11px', color: '#dc2626', fontWeight: 600, marginLeft: '2px' }}>
+                {hoursSaveError}
               </span>
             )}
           </div>

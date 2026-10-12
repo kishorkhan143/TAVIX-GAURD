@@ -28,8 +28,9 @@ backend_dir = os.path.dirname(os.path.abspath(__file__))
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import date as calendar_date, datetime, timedelta, timezone
 from typing import List, Optional
+from zoneinfo import ZoneInfo
 
 from fastapi import (
     Depends,
@@ -88,6 +89,7 @@ logger = logging.getLogger("authsentinel.backend")
 _start_time = time.monotonic()
 COLLECTOR_STALE_SECONDS = 45
 COLLECTOR_HEARTBEAT_INTERVAL_SECONDS = 15
+LOCAL_TIMEZONE = ZoneInfo("Asia/Kolkata")
 # Track each collector by label (LAPTOP-A, LAPTOP-B, …)
 _collectors: dict[str, dict] = {}
 
@@ -98,6 +100,21 @@ def _utc_isoformat(value: datetime) -> str:
     else:
         value = value.astimezone(timezone.utc)
     return value.isoformat().replace("+00:00", "Z")
+
+
+def _local_date_utc_range(date_value: str) -> tuple[datetime, datetime]:
+    try:
+        local_date = calendar_date.fromisoformat(date_value)
+        if local_date.isoformat() != date_value:
+            raise ValueError
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Date must use YYYY-MM-DD format") from exc
+
+    start_local = datetime.combine(local_date, datetime.min.time(), tzinfo=LOCAL_TIMEZONE)
+    end_local = start_local + timedelta(days=1)
+    start_utc = start_local.astimezone(timezone.utc).replace(tzinfo=None)
+    end_utc = end_local.astimezone(timezone.utc).replace(tzinfo=None)
+    return start_utc, end_utc
 
 
 def _collector_last_seen_utc(collector: dict) -> Optional[datetime]:
@@ -548,7 +565,8 @@ async def list_events(
     if username:
         stmt = stmt.where(AuthEvent.username == username)
     if date:
-        stmt = stmt.where(func.date(AuthEvent.timestamp) == date)
+        start_utc, end_utc = _local_date_utc_range(date)
+        stmt = stmt.where(AuthEvent.timestamp >= start_utc, AuthEvent.timestamp < end_utc)
     result = db.execute(stmt)
     return result.scalars().all()
 
@@ -567,7 +585,8 @@ async def list_alerts(
     if status is not None and status != "ALL":
         stmt = stmt.where(Alert.status == status)
     if date:
-        stmt = stmt.where(func.date(Alert.triggered_at) == date)
+        start_utc, end_utc = _local_date_utc_range(date)
+        stmt = stmt.where(Alert.triggered_at >= start_utc, Alert.triggered_at < end_utc)
     result = db.execute(stmt)
     return result.scalars().all()
 
@@ -658,12 +677,17 @@ async def execute_alert_action(
 
     # Action is "shutdown" or "lock_screen"
     target = body.terminal_id or alert.source_host or alert.target_computer
-    if (not target or target == "UNKNOWN") and alert.source_ip:
+    if target and target.strip().upper() in ("UNKNOWN", "—", "-"):
+        target = None
+    if not target and alert.source_ip:
         comp = db.execute(select(Computer).where(Computer.ip_address == alert.source_ip)).scalars().first()
         if comp:
             target = comp.terminal_id
     if not target:
-        target = "LAPTOP-A"
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot execute remote action: this alert has no identifiable computer target.",
+        )
 
     cmd = RemoteCommand(
         terminal_id=target,
@@ -682,7 +706,7 @@ async def execute_alert_action(
 
     action_label = "Shutdown" if action == "shutdown" else "Lock Screen"
     alert.status = "REMEDIATING"
-    alert.resolved = True
+    alert.resolved = False
     alert.reason = f"{alert.reason or ''}\n[ADMIN ACTION: Dispatched {action_label} to {target}]".strip()
     db.commit()
     db.refresh(cmd)
@@ -724,6 +748,7 @@ async def execute_alert_action(
         "command_id": cmd.id,
         "terminal_id": target,
         "action": action,
+        "alert_status": alert.status,
         "status": "PENDING",
         "message": f"{action_label} command queued for {target}.",
     }
@@ -791,6 +816,18 @@ async def ack_collector_command(
     cmd.status = body.status
     cmd.result_message = body.message
     cmd.executed_at = now_utc
+    alert = db.get(Alert, cmd.alert_id) if cmd.alert_id else None
+    if alert and alert.status == "REMEDIATING":
+        if body.status == "EXECUTED":
+            alert.status = "RESOLVED"
+            alert.resolved = True
+        else:
+            alert.status = "OPEN"
+            alert.resolved = False
+            alert.reason = (
+                f"{alert.reason or ''}\n[ADMIN ACTION FAILED: "
+                f"{body.message or 'Collector reported command failure'}]"
+            ).strip()
     db.commit()
 
     logger.info("[COMMAND ACK] Command #%d (%s on %s): %s - %s", cmd.id, cmd.command, cmd.terminal_id, cmd.status, cmd.result_message)
@@ -805,6 +842,16 @@ async def ack_collector_command(
         "alert_id": cmd.alert_id,
         "executed_at": _utc_isoformat(now_utc),
     })
+    if alert and alert.status in ("RESOLVED", "OPEN"):
+        await manager.broadcast({
+            "type": "ALERT_STATUS_CHANGED",
+            "alert": {
+                "id": alert.id,
+                "status": alert.status,
+                "resolved": alert.resolved,
+                "reason": alert.reason,
+            },
+        })
 
     return {"ok": True, "command_id": cmd.id, "status": cmd.status}
 
@@ -1257,6 +1304,12 @@ async def list_terminals(db: Session = Depends(get_db)):
             continue
         if tid not in terminals_map:
             terminals_map[tid] = ev
+
+    # Include collector-registered computers even before they generate an auth event.
+    computers = db.execute(select(Computer)).scalars().all()
+    computers_map = {computer.terminal_id: computer for computer in computers}
+    for computer in computers:
+        terminals_map.setdefault(computer.terminal_id, None)
             
     # Fetch assignments
     assignments = {
@@ -1271,22 +1324,23 @@ async def list_terminals(db: Session = Depends(get_db)):
     
     terminal_list = []
     for tid, ev in terminals_map.items():
+        computer = computers_map.get(tid)
         assigned_lab_id = assignments.get(tid)
         assigned_lab_name = labs_map.get(assigned_lab_id) if assigned_lab_id else None
         
         # Format date as DD/MM/YYYY HH:mm:ss
         ts_str = "—"
-        if ev.timestamp:
+        if ev and ev.timestamp:
             ts_str = ev.timestamp.strftime("%d/%m/%Y %H:%M:%S")
             
         terminal_list.append(
             TerminalResponse(
                 terminal_id=tid,
-                account=ev.username or "—",
-                source_ip=ev.source_ip or "—",
+                account=(ev.username if ev else None) or (computer.logged_in_user if computer else None) or "—",
+                source_ip=(ev.source_ip if ev else None) or (computer.ip_address if computer else None) or "—",
                 last_login=ts_str,
-                last_login_raw=ev.timestamp,
-                status=ev.status or "UNKNOWN",
+                last_login_raw=ev.timestamp if ev else None,
+                status=(ev.status if ev else None) or "UNKNOWN",
                 lab_id=assigned_lab_id,
                 lab_name=assigned_lab_name,
             )
@@ -1388,6 +1442,7 @@ async def health(db: Session = Depends(get_db)):
         collector_hostname=col_hostname,
         collector_ip=col_ip,
         uptime_seconds=time.monotonic() - _start_time,
+        smtp_configured=smtp_service.is_configured(),
     )
 
 

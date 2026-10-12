@@ -5,7 +5,7 @@ AuthSentinel — Pydantic Schemas (API request / response shapes)
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_serializer
 
 
@@ -44,7 +44,7 @@ class AlertActionRequest(BaseModel):
 
 
 class CommandAckRequest(BaseModel):
-    status: str = "EXECUTED"                 # "EXECUTED" | "FAILED"
+    status: Literal["EXECUTED", "FAILED"] = "EXECUTED"
     message: Optional[str] = None
 
 
@@ -153,6 +153,7 @@ class HealthResponse(BaseModel):
     status: str
     backend: str
     database: str
+    smtp_configured: bool = False
     websocket_connections: int
     collector_status: str
     collector_hostname: Optional[str] = None
@@ -333,4 +334,3 @@ class AdminInfoResponse(BaseModel):
     smtp_enabled: bool
     recipient_emails: list[str]
     total_users: int
-

@@ -5,7 +5,7 @@
  * This is where the sidebar, header, and main content live.
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import './App.css';
 import './csv_analytics/csvAnalytics.css';
@@ -36,6 +36,13 @@ function alertTypeLabel(type) {
   if (type === 'SUCCESS_AFTER_FAILURES') return 'ANOMALY';
   if (type === 'UNUSUAL_LOGIN') return 'UNUSUAL LOGIN';
   return type;
+}
+
+function getAlertMachine(alert) {
+  const machine = alert.source_host || alert.target_computer;
+  if (!machine) return '';
+  const normalized = String(machine).trim();
+  return ['UNKNOWN', '—', '-'].includes(normalized.toUpperCase()) ? '' : normalized;
 }
 
 // ── Icons as SVG Components ──────────────────────────────────────────────────
@@ -150,11 +157,11 @@ const MENU_ITEMS = [
 ];
 
 // ── Sidebar Component ────────────────────────────────────────────────────────
-function Sidebar({ activeMenu, onMenuChange, user, onLogout }) {
+function Sidebar({ activeMenu, onMenuChange, user, onLogout, isOpen }) {
   const motionPrefs = useMotionPrefs();
   
   return (
-    <aside className="sidebar">
+    <aside id="dashboard-sidebar" className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <div className="logo">
           <img src={tavixLogo} alt="TAVIX GUARD" className="logo-img" />
@@ -257,7 +264,7 @@ function Sidebar({ activeMenu, onMenuChange, user, onLogout }) {
 }
 
 // ── Header Component ────────────────────────────────────────────────────────
-function Header({ currentMenuLabel, currentCategory }) {
+function Header({ currentMenuLabel, currentCategory, onMenuToggle, isSidebarOpen }) {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -268,6 +275,29 @@ function Header({ currentMenuLabel, currentCategory }) {
   return (
     <header className="header">
       <div className="header-left">
+        <button
+          type="button"
+          className="mobile-menu-toggle"
+          onClick={onMenuToggle}
+          aria-label={isSidebarOpen ? 'Close navigation menu' : `Open navigation menu, current page ${currentMenuLabel}`}
+          aria-controls="dashboard-sidebar"
+          aria-expanded={isSidebarOpen}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            {isSidebarOpen ? (
+              <>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </>
+            ) : (
+              <>
+                <line x1="4" y1="6" x2="20" y2="6" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="18" x2="20" y2="18" />
+              </>
+            )}
+          </svg>
+        </button>
         <div className="header-category">
           <motion.span 
             key={currentCategory}
@@ -289,6 +319,21 @@ function Header({ currentMenuLabel, currentCategory }) {
         </div>
       </div>
     </header>
+  );
+}
+
+// ── Status Card Component (for System Status grid) ────────────────────────────
+function StatusCard({ label, online, count }) {
+  const isHealthy = online === true || (count !== undefined && count > 0);
+  const displayText = label === 'Collectors' 
+    ? `${count || 0}`
+    : isHealthy ? 'Online' : 'Offline';
+
+  return (
+    <div className={`status-card-inline ${isHealthy ? 'healthy' : 'unhealthy'}`}>
+      <span className="status-card-label-inline">{label}</span>
+      <span className="status-card-value-inline">{displayText}</span>
+    </div>
   );
 }
 
@@ -315,332 +360,20 @@ function StatusBadge({ label, online, count }) {
   );
 }
 
-// ── Event & Alert Trends Chart ───────────────────────────────────────────────
-function EventAlertTrendsChart({ trends }) {
-  const [hoveredIdx, setHoveredIdx] = useState(null);
-  const [timeRange, setTimeRange] = useState('24h');
-  const [timeDropdownOpen, setTimeDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  const W = 480;
-  const H = 130;
-  const padL = 22;
-  const padR = 8;
-  const padT = 8;
-  const padB = 20;
-  const innerW = W - padL - padR;
-  const innerH = H - padT - padB;
-
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setTimeDropdownOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const series = [
-    { key: 'total',      label: 'Total Events', color: '#3b82f6', dash: false },
-    { key: 'successful', label: 'Successful',   color: '#10b981', dash: false },
-    { key: 'failed',     label: 'Failed',       color: '#ef4444', dash: false },
-    { key: 'alerts',     label: 'Alerts',       color: '#f59e0b', dash: true  },
-  ];
-
-  const allValues = [
-    ...(trends.total      || []),
-    ...(trends.successful || []),
-    ...(trends.failed     || []),
-    ...(trends.alerts     || []),
-  ];
-  const maxVal = Math.max(...allValues, 1);
-  const yMax = Math.max(Math.ceil(maxVal), 2);
-  const yTicks = [0, Math.round(yMax * 0.25), Math.round(yMax * 0.5), Math.round(yMax * 0.75), yMax];
-  const uniqueYTicks = [...new Set(yTicks)].sort((a, b) => a - b);
-
-  const xTick = ['0h', '3h', '6h', '9h', '12h', '15h', '18h', '21h', '24h'];
-
-  function getPoints(data) {
-    if (!data || data.length === 0) return [];
-    return data.map((val, i) => {
-      const x = padL + (i / (data.length - 1)) * innerW;
-      const y = padT + innerH - (val / yMax) * innerH;
-      return { x, y, val };
-    });
-  }
-
-  function buildPath(points) {
-    if (points.length === 0) return '';
-    let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[i];
-      const p1 = points[i + 1];
-      const midX = ((p0.x + p1.x) / 2).toFixed(2);
-      d += ` C ${midX} ${p0.y.toFixed(2)}, ${midX} ${p1.y.toFixed(2)}, ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}`;
-    }
-    return d;
-  }
-
-  function buildArea(points) {
-    if (points.length === 0) return '';
-    const line = buildPath(points);
-    const last = points[points.length - 1];
-    const first = points[0];
-    const bottom = padT + innerH;
-    return `${line} L ${last.x.toFixed(2)} ${bottom} L ${first.x.toFixed(2)} ${bottom} Z`;
-  }
-
-  const handleMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clientX = e.clientX - rect.left;
-    const ratio = Math.max(0, Math.min(1, (clientX - padL) / innerW));
-    const totalPoints = (trends.total || []).length || 12;
-    const nearestIdx = Math.round(ratio * (totalPoints - 1));
-    setHoveredIdx(nearestIdx);
-  };
-
-  const timeLabelMap = {
-    '24h': '24 Hours',
-    '12h': '12 Hours',
-    '6h': '6 Hours',
-    '1h': '1 Hour',
-  };
-
-  const hoveredData = hoveredIdx !== null ? {
-    time: xTick[Math.min(hoveredIdx, xTick.length - 1)] || `${hoveredIdx * 2}h`,
-    total: trends.total?.[hoveredIdx] ?? 0,
-    successful: trends.successful?.[hoveredIdx] ?? 0,
-    failed: trends.failed?.[hoveredIdx] ?? 0,
-    alerts: trends.alerts?.[hoveredIdx] ?? 0,
-  } : null;
-
-  return (
-    <div>
-      <div className="trend-chart-header" style={{ display: 'none' }} />
-      <div
-        className="trend-chart-body"
-        style={{ position: 'relative', overflow: 'visible' }}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => setHoveredIdx(null)}
-      >
-        {/* Y-axis labels */}
-        <div className="trend-yaxis" style={{ height: `${H}px`, paddingTop: `${padT}px`, paddingBottom: `${padB}px` }}>
-          {[...uniqueYTicks].reverse().map((v) => (
-            <span key={v}>{v}</span>
-          ))}
-        </div>
-
-        {/* SVG chart */}
-        <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-          <svg
-            viewBox={`0 0 ${W} ${H}`}
-            preserveAspectRatio="none"
-            className="trend-svg"
-            style={{ width: '100%', height: `${H}px`, overflow: 'visible', cursor: 'crosshair' }}
-          >
-            <defs>
-              {series.map((s) => (
-                <linearGradient key={`grad-${s.key}`} id={`eatrend-grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={s.color} stopOpacity="0.28" />
-                  <stop offset="100%" stopColor={s.color} stopOpacity="0.0" />
-                </linearGradient>
-              ))}
-              <filter id="datumGlow" x="-50%" y="-50%" width="200%" height="200%">
-                <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="rgba(0,0,0,0.25)" />
-              </filter>
-            </defs>
-
-            {/* Horizontal gridlines */}
-            {uniqueYTicks.map((v) => {
-              const y = padT + innerH - (v / yMax) * innerH;
-              return (
-                <line
-                  key={`grid-${v}`}
-                  x1={padL} y1={y} x2={W - padR} y2={y}
-                  stroke="#e5e7eb" strokeWidth="0.7" strokeDasharray="3 3"
-                />
-              );
-            })}
-
-            {/* Vertical guide line on hover */}
-            {hoveredIdx !== null && (
-              <line
-                x1={padL + (hoveredIdx / (((trends.total || []).length || 12) - 1)) * innerW}
-                y1={padT}
-                x2={padL + (hoveredIdx / (((trends.total || []).length || 12) - 1)) * innerW}
-                y2={padT + innerH}
-                stroke="#94a3b8"
-                strokeWidth="1.2"
-                strokeDasharray="4 2"
-                style={{ transition: 'x1 0.08s ease, x2 0.08s ease' }}
-              />
-            )}
-
-            {/* Area fills */}
-            {series.map((s, idx) => {
-              const data = trends[s.key] || [];
-              const pts = getPoints(data);
-              if (pts.length < 2) return null;
-              return (
-                <motion.path
-                  key={`area-${s.key}`}
-                  d={buildArea(pts)}
-                  fill={`url(#eatrend-grad-${s.key})`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.9, ease: 'easeOut', delay: idx * 0.12 + 0.15 }}
-                />
-              );
-            })}
-
-            {/* Lines */}
-            {series.map((s, idx) => {
-              const data = trends[s.key] || [];
-              const pts = getPoints(data);
-              if (pts.length < 2) return null;
-              return (
-                <motion.path
-                  key={`line-${s.key}`}
-                  d={buildPath(pts)}
-                  fill="none"
-                  stroke={s.color}
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeDasharray={s.dash ? '5 3' : undefined}
-                  vectorEffect="non-scaling-stroke"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.6, ease: 'easeOut', delay: idx * 0.08 }}
-                />
-              );
-            })}
-
-            {/* Interactive datum dots - come forward smoothly on hover */}
-            {series.map((s) => {
-              const data = trends[s.key] || [];
-              const pts = getPoints(data);
-              return pts.map((pt, i) => {
-                const isHovered = hoveredIdx === i;
-                return (
-                  <circle
-                    key={`dot-${s.key}-${i}`}
-                    cx={pt.x}
-                    cy={pt.y}
-                    r={isHovered ? 6 : 2.5}
-                    fill={isHovered ? '#ffffff' : s.color}
-                    stroke={s.color}
-                    strokeWidth={isHovered ? 2.5 : 1}
-                    filter={isHovered ? 'url(#datumGlow)' : undefined}
-                    style={{
-                      transition: 'r 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275), stroke-width 0.22s ease',
-                      pointerEvents: 'none',
-                    }}
-                  />
-                );
-              });
-            })}
-          </svg>
-
-          {/* iOS Floating datum Tooltip */}
-          <AnimatePresence>
-            {hoveredData && (
-              <motion.div
-                initial={{ opacity: 0, y: 6, scale: 0.92 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 4, scale: 0.94 }}
-                transition={{ type: 'spring', stiffness: 450, damping: 26 }}
-                style={{
-                  position: 'absolute',
-                  top: '-12px',
-                  left: `${Math.min(Math.max(15, (padL + (hoveredIdx / (((trends.total || []).length || 12) - 1)) * innerW) / W * 100), 85)}%`,
-                  transform: 'translate(-50%, -100%)',
-                  background: 'rgba(255, 255, 255, 0.92)',
-                  backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)',
-                  border: '1px solid rgba(226, 232, 240, 0.8)',
-                  borderRadius: '12px',
-                  boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.14), 0 4px 10px rgba(0, 0, 0, 0.05)',
-                  padding: '8px 12px',
-                  pointerEvents: 'none',
-                  zIndex: 40,
-                  minWidth: '130px',
-                }}
-              >
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#334155', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px', marginBottom: '4px' }}>
-                  Interval {hoveredData.time}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 10px', fontSize: '10.5px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#3b82f6' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3b82f6', display: 'inline-block' }} />
-                    Total: <strong>{hoveredData.total}</strong>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#10b981' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                    Success: <strong>{hoveredData.successful}</strong>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#ef4444' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
-                    Failed: <strong>{hoveredData.failed}</strong>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#f59e0b' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
-                    Alerts: <strong>{hoveredData.alerts}</strong>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* X-axis time labels */}
-          <div className="trend-xlabels">
-            {xTick.map((t, idx) => (
-              <span
-                key={t}
-                style={{
-                  color: hoveredIdx === idx ? 'var(--text-primary)' : undefined,
-                  fontWeight: hoveredIdx === idx ? 700 : undefined,
-                  transition: 'color 0.15s ease',
-                }}
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Overview Section ────────────────────────────────────────────────────────
 function OverviewSection({ events, alerts, onExecuteAction, onSelectAlert }) {
   const { selectedDate, isToday, resetToToday, displayDate } = useDateFilter();
   const motionPrefs = useMotionPrefs();
   const fadeUpVariant = motionPrefs.fadeUp || variants.fadeUp;
   
-  const [trendRange, setTrendRange] = useState('24h');
-  const [trendDropdownOpen, setTrendDropdownOpen] = useState(false);
-  const trendDropdownRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (trendDropdownRef.current && !trendDropdownRef.current.contains(e.target)) {
-        setTrendDropdownOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const filteredEvents = filterByDate(events, selectedDate);
   const filteredAlerts = filterByDate(alerts, selectedDate);
+  const activeFilteredAlerts = filteredAlerts.filter((alert) => !alert.resolved);
 
   const totalEvents = filteredEvents.length;
   const successfulLogins = filteredEvents.filter((e) => e.status === 'SUCCESS').length;
   const failedLogins = filteredEvents.filter((e) => e.status === 'FAILURE').length;
-  const activeAlerts = filteredAlerts.filter((a) => !a.resolved).length;
+  const activeAlerts = activeFilteredAlerts.length;
 
   const trends = useMemo(
     () => generateTrendIntervals(filteredEvents, filteredAlerts, 12),
@@ -654,16 +387,9 @@ function OverviewSection({ events, alerts, onExecuteAction, onSelectAlert }) {
     { id: 'alerts', label: 'Alerts', icon: 'alert-triangle', value: activeAlerts, color: '#f59e0b', data: trends.alerts, isAlert: true },
   ];
 
-  const trendRangeLabels = {
-    '24h': '24 hour les',
-    '12h': '12 hour les',
-    '6h': '6 hour les',
-    '1h': '1 hour les',
-  };
-
   return (
     <motion.div
-      className="section"
+      className="section overview-section"
       variants={fadeUpVariant}
       initial="hidden"
       animate="visible"
@@ -731,60 +457,13 @@ function OverviewSection({ events, alerts, onExecuteAction, onSelectAlert }) {
             <h3>Recent Events</h3>
             <span className="badge">{filteredEvents.length}</span>
           </div>
-          <EventsTable events={filteredEvents} emptyMessage={`No events on ${displayDate}`} />
+          <EventsTable
+            events={filteredEvents}
+            emptyMessage={`No events on ${displayDate}`}
+            recent
+          />
         </div>
 
-        {/* Right: Event & Alert Trends chart */}
-        <div className="trend-chart-panel">
-          <div className="panel-header">
-            <h3>Event &amp; Alert Trends</h3>
-            <div ref={trendDropdownRef} style={{ position: 'relative' }}>
-              <button
-                type="button"
-                className="trend-time-badge"
-                onClick={() => setTrendDropdownOpen(!trendDropdownOpen)}
-                aria-expanded={trendDropdownOpen}
-              >
-                {trendRangeLabels[trendRange]} ▾
-              </button>
-              <AnimatePresence>
-                {trendDropdownOpen && (
-                  <motion.div
-                    className="ios-soft-dropdown"
-                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.96 }}
-                    transition={{ type: 'spring', stiffness: 450, damping: 28 }}
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: 'calc(100% + 6px)',
-                      zIndex: 100,
-                      minWidth: '120px',
-                    }}
-                  >
-                    {['24h', '12h', '6h', '1h'].map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        className={`ios-dropdown-item ${trendRange === r ? 'active' : ''}`}
-                        onClick={() => {
-                          setTrendRange(r);
-                          setTrendDropdownOpen(false);
-                        }}
-                      >
-                        {trendRangeLabels[r]}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-          <div className="trend-chart-content">
-            <EventAlertTrendsChart trends={trends} />
-          </div>
-        </div>
       </motion.div>
 
       <motion.div
@@ -796,10 +475,10 @@ function OverviewSection({ events, alerts, onExecuteAction, onSelectAlert }) {
       >
         <div className="panel-header">
           <h3>Active Alerts</h3>
-          <span className="badge alert">{filteredAlerts.length}</span>
+          <span className="badge alert">{activeFilteredAlerts.length}</span>
         </div>
         <AlertList
-          alerts={filteredAlerts}
+          alerts={activeFilteredAlerts}
           emptyMessage={`No incidents on ${displayDate}`}
           onExecuteAction={onExecuteAction}
           onSelectAlert={onSelectAlert}
@@ -984,249 +663,118 @@ function SettingsSection({ health, user, token, onLogout, onUpdateUser }) {
       animate="visible"
       exit="exit"
     >
-      <div className="section-header">
-        <h2>System Settings</h2>
-        <p>System status, profile settings, and real-time SMTP incident alerting</p>
+      {/* TITLE */}
+      <div style={{ marginBottom: '32px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+          Settings
+        </h1>
       </div>
 
-      {/* 1. Account Profile Card: Edit User Name */}
-      <motion.div
-        className="settings-card"
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={springs.soft}
-        viewport={{ once: true, margin: '-40px' }}
-      >
-        <h3>Account Profile</h3>
-        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', marginBottom: '16px' }}>
-          Personalize your account display name across the dashboard.
-        </p>
-
-        <form onSubmit={handleSaveName} style={{ maxWidth: '520px' }}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              Display Name
-            </label>
-            <div style={{ display: 'flex', gap: '10px' }}>
+      {/* 1. PROFILE SECTION */}
+      <div style={{ marginBottom: '40px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
+          Profile
+        </h2>
+        <form onSubmit={handleSaveName}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', marginBottom: '16px' }}>
+            <div style={{ flex: 1, maxWidth: '320px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Display name
+              </label>
               <input
                 type="text"
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
-                placeholder="Enter your name (e.g. Kishor Khan)"
+                placeholder="Enter your name"
                 disabled={isSavingName}
                 style={{
-                  flex: 1,
-                  padding: '10px 14px',
+                  width: '100%',
+                  padding: '8px 12px',
                   background: 'var(--bg-secondary)',
                   border: '1px solid var(--border-light)',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   color: 'var(--text-primary)',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   outline: 'none',
                 }}
               />
-              <motion.button
-                type="submit"
-                disabled={isSavingName}
-                style={{
-                  padding: '10px 20px',
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: isSavingName ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
-                }}
-                whileHover={{ scale: isSavingName ? 1 : 1.02 }}
-                whileTap={{ scale: isSavingName ? 1 : 0.97 }}
-              >
-                {isSavingName ? 'Saving...' : 'Save Name'}
-              </motion.button>
             </div>
-            {profileStatus && (
-              <div
-                style={{
-                  marginTop: '10px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: profileStatus.success ? '#10b981' : '#ef4444',
-                }}
-              >
-                {profileStatus.message}
-              </div>
-            )}
-          </div>
-
-          <div className="info-grid" style={{ marginTop: '16px' }}>
-            <div className="info-item">
-              <span className="info-label">Current Name:</span>
-              <span className="info-value" style={{ fontWeight: 600, color: '#0066ff' }}>
-                {user?.name || 'Not set'}
-              </span>
-            </div>
-            <div className="info-item">
-              <span className="info-label">Account Email:</span>
-              <span className="info-value">{user?.email || 'N/A'}</span>
-            </div>
-          </div>
-        </form>
-      </motion.div>
-
-      {/* 2. Restored System Status: Backend, Database, Collectors indicators */}
-      <motion.div
-        className="settings-card"
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={springs.soft}
-        viewport={{ once: true, margin: '-40px' }}
-      >
-        <h3>System Status</h3>
-        <div className="status-grid settings-status" style={{ marginTop: '16px' }}>
-          <StatusBadge label="Backend" online={isBackendOnline} />
-          <StatusBadge label="Database" online={isDbOnline} />
-          <StatusBadge label="Collectors" online={isCollectorOnline} count={isCollectorOnline ? 1 : 0} />
-        </div>
-      </motion.div>
-
-      {/* 2. Admin Logic & SMTP Incident Alert Dispatch */}
-      <motion.div
-        className="settings-card"
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={springs.soft}
-        viewport={{ once: true, margin: '-40px' }}
-      >
-        <h3>Administrator &amp; Incident Alerts</h3>
-        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', marginBottom: '16px' }}>
-          When any security incident or brute-force threat occurs, alert notifications are immediately dispatched to the active login account via SMTP.
-        </p>
-
-        <div className="info-grid">
-          <div className="info-item">
-            <span className="info-label">Active Admin Account:</span>
-            <span className="info-value" style={{ fontWeight: 600 }}>{user?.email || 'kishorkhan.dev@gmail.com'}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Role:</span>
-            <span className="info-value" style={{ color: '#10b981', fontWeight: 600 }}>{user?.role || 'Administrator'}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">SMTP Alert Dispatch:</span>
-            <span className="info-value" style={{ color: '#0066ff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-              Active (smtp.gmail.com:587)
-            </span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Incident Recipient Mail ID:</span>
-            <span className="info-value" style={{ fontWeight: 600 }}>{user?.email || 'kishorkhan.dev@gmail.com'}</span>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap' }}>
-          <motion.button
-            onClick={handleSendTestIncidentEmail}
-            disabled={isSendingTest}
-            style={{
-              padding: '10px 18px',
-              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: isSendingTest ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
-            }}
-            whileHover={{ scale: isSendingTest ? 1 : 1.02 }}
-            whileTap={{ scale: isSendingTest ? 1 : 0.97 }}
-            transition={springs.snappy}
-          >
-            {isSendingTest ? 'Sending Alert...' : '✉ Send Test Incident Alert (SMTP)'}
-          </motion.button>
-
-          <motion.button
-            onClick={onLogout}
-            style={{
-              padding: '10px 18px',
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              boxShadow: '0 2px 6px rgba(239, 68, 68, 0.2)',
-            }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.96 }}
-            transition={springs.snappy}
-          >
-            Logout
-          </motion.button>
-
-          {testEmailStatus && (
-            <span
+            <motion.button
+              type="submit"
+              disabled={isSavingName}
               style={{
+                padding: '8px 20px',
+                background: '#0066ff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
                 fontSize: '13px',
                 fontWeight: 600,
-                color: testEmailStatus.success ? '#10b981' : '#ef4444',
-                padding: '6px 12px',
-                background: testEmailStatus.success ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                borderRadius: '6px',
-                border: `1px solid ${testEmailStatus.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                cursor: isSavingName ? 'not-allowed' : 'pointer',
+                height: '36px',
               }}
+              whileHover={{ scale: isSavingName ? 1 : 1.02 }}
+              whileTap={{ scale: isSavingName ? 1 : 0.97 }}
             >
-              {testEmailStatus.message}
-            </span>
+              {isSavingName ? 'Saving...' : 'Save'}
+            </motion.button>
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+            Account email: <span style={{ fontWeight: 600 }}>{user?.email || 'N/A'}</span>
+          </div>
+          {profileStatus && (
+            <div style={{ marginTop: '8px', fontSize: '12px', fontWeight: 600, color: profileStatus.success ? '#10b981' : '#ef4444' }}>
+              {profileStatus.message}
+            </div>
           )}
-        </div>
-      </motion.div>
+        </form>
+      </div>
 
-      {/* 3. Service Information */}
-      <motion.div
-        className="settings-card"
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={springs.soft}
-        viewport={{ once: true, margin: '-40px' }}
-      >
-        <h3>Service Information</h3>
-        <div className="info-grid">
-          <div className="info-item">
-            <span className="info-label">Backend URL:</span>
-            <span className="info-value">{BACKEND_URL}</span>
+      {/* 2. SYSTEM STATUS SECTION */}
+      <div style={{ marginBottom: '40px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
+          System status
+        </h2>
+        <div className="system-status-grid">
+          <StatusCard label="Backend" online={isBackendOnline} />
+          <StatusCard label="Database" online={isDbOnline} />
+          <StatusCard label="Collectors" count={health?.collector_count || 0} />
+          <StatusCard label="SMTP Config" online={health?.smtp_configured === true} />
+        </div>
+      </div>
+
+      {/* 3. SERVICE SECTION */}
+      <div>
+        <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
+          Service
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', fontSize: '13px' }}>
+          <div>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}>Backend</span>
+            <div style={{ color: 'var(--text-primary)', fontWeight: 500, marginTop: '4px' }}>{BACKEND_URL}</div>
           </div>
-          <div className="info-item">
-            <span className="info-label">Database:</span>
-            <span className="info-value">SQLite (authsentinel.db)</span>
+          <div>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}>Database</span>
+            <div style={{ color: 'var(--text-primary)', fontWeight: 500, marginTop: '4px' }}>SQLite (authsentinel.db)</div>
           </div>
-          <div className="info-item">
-            <span className="info-label">Frontend URL:</span>
-            <span className="info-value">{window.location.origin}</span>
+          <div>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}>Frontend</span>
+            <div style={{ color: 'var(--text-primary)', fontWeight: 500, marginTop: '4px' }}>{window.location.origin}</div>
           </div>
           {health && (
-            <div className="info-item">
-              <span className="info-label">Uptime:</span>
-              <span className="info-value">{Math.round((health.uptime_seconds || 0) / 60)} minutes</span>
+            <div>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}>Uptime</span>
+              <div style={{ color: 'var(--text-primary)', fontWeight: 500, marginTop: '4px' }}>{Math.round((health.uptime_seconds || 0) / 60)} min</div>
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
 
 // ── Events Table Component ──────────────────────────────────────────────────
-function EventsTable({ events, emptyMessage = 'No events to display' }) {
+function EventsTable({ events, emptyMessage = 'No events to display', recent = false }) {
   const motionPrefs = useMotionPrefs();
   const listVariants = motionPrefs.listItem || variants.listItem;
   
@@ -1239,13 +787,26 @@ function EventsTable({ events, emptyMessage = 'No events to display' }) {
   }
 
   return (
-    <div className="events-table-container">
+    <div className={`events-table-container ${recent ? 'recent-events-table' : ''}`}>
       <div className="events-table-header">
-        <div className="evt-hcol evt-col-time">Time</div>
-        <div className="evt-hcol evt-col-user">User</div>
-        <div className="evt-hcol evt-col-ip">IP Address</div>
-        <div className="evt-hcol evt-col-status">Status</div>
-        <div className="evt-hcol evt-col-sev">Severity</div>
+        {recent ? (
+          <>
+            <div className="evt-hcol evt-col-event-id">Event ID</div>
+            <div className="evt-hcol evt-col-time">Timestamp</div>
+            <div className="evt-hcol evt-col-user">Account</div>
+            <div className="evt-hcol evt-col-computer">Computer</div>
+            <div className="evt-hcol evt-col-event">Event</div>
+            <div className="evt-hcol evt-col-department-case">Department_Case</div>
+          </>
+        ) : (
+          <>
+            <div className="evt-hcol evt-col-time">Time</div>
+            <div className="evt-hcol evt-col-user">User</div>
+            <div className="evt-hcol evt-col-ip">IP Address</div>
+            <div className="evt-hcol evt-col-status">Status</div>
+            <div className="evt-hcol evt-col-sev">Severity</div>
+          </>
+        )}
       </div>
       <div className="events-table-body">
         <AnimatePresence initial={false}>
@@ -1254,10 +815,20 @@ function EventsTable({ events, emptyMessage = 'No events to display' }) {
             const dateStr = formatDisplayDate(getItemDateString(ev.timestamp));
             const risk = (ev.risk_level || 'LOW').toUpperCase();
             const isHigh = risk === 'HIGH' || risk === 'CRITICAL';
+            const computer = ev.target_computer || ev.source_host || '—';
+            const eventLabel =
+              ev.logon_type_description ||
+              (ev.status === 'SUCCESS'
+                ? 'Successful logon'
+                : ev.status === 'FAILURE'
+                  ? 'Failed logon'
+                  : ev.status || '—');
+            const departmentCase =
+              ev.department_case || ev.department || ev.case || '—';
 
             return (
               <motion.div
-                key={ev.id}
+                key={ev.id || `${ev.event_id}-${ev.timestamp}-${ev.username}`}
                 layout="position"
                 variants={listVariants}
                 initial="hidden"
@@ -1266,34 +837,61 @@ function EventsTable({ events, emptyMessage = 'No events to display' }) {
                 transition={idx < 5 ? undefined : { delay: Math.min(idx * 0.02, 0.1) }}
                 className={`event-row status-${ev.status?.toLowerCase() || 'unknown'}`}
               >
-                <div className="evt-cell evt-col-time">
-                  <div className="evt-time-val">{timeStr}</div>
-                  <div className="evt-date-val">{dateStr}</div>
-                </div>
-                <div className="evt-cell evt-col-user">
-                  <span className="evt-user-link" title={`User: ${ev.username || '—'}`}>
-                    {ev.username || '—'}
-                  </span>
-                </div>
-                <div className="evt-cell evt-col-ip" title={`IP: ${ev.source_ip || '—'}`}>
-                  <span className="evt-ip-text">{ev.source_ip || '—'}</span>
-                </div>
-                <div className="evt-cell evt-col-status">
-                  {ev.status === 'SUCCESS' ? (
-                    <span className="evt-status-icon success" title="Successful authentication">
-                      <Icon name="check-circle" size={15} />
-                    </span>
-                  ) : (
-                    <span className="evt-status-icon failure" title="Failed authentication">
-                      <Icon name="x-circle" size={15} />
-                    </span>
-                  )}
-                </div>
-                <div className="evt-cell evt-col-sev">
-                  <span className={`evt-severity-tag ${isHigh ? 'high' : 'low'}`}>
-                    {isHigh ? 'HIGH' : 'LOW'}
-                  </span>
-                </div>
+                {recent ? (
+                  <>
+                    <div className="evt-cell evt-col-event-id">
+                      <span className="evt-event-id">{ev.event_id ?? '—'}</span>
+                    </div>
+                    <div className="evt-cell evt-col-time" title={ev.timestamp || ''}>
+                      <span className="evt-timestamp">{fmtDateTime(ev.timestamp)}</span>
+                    </div>
+                    <div className="evt-cell evt-col-user" title={`Account: ${ev.username || '—'}`}>
+                      <span className="evt-user-link">{ev.username || '—'}</span>
+                    </div>
+                    <div className="evt-cell evt-col-computer" title={`Computer: ${computer}`}>
+                      <span className="evt-computer-text">{computer}</span>
+                    </div>
+                    <div className="evt-cell evt-col-event" title={`Event: ${eventLabel}`}>
+                      <span className={`evt-event-type ${ev.status?.toLowerCase() || ''}`}>
+                        {eventLabel}
+                      </span>
+                    </div>
+                    <div className="evt-cell evt-col-department-case" title={`Department_Case: ${departmentCase}`}>
+                      <span className="evt-department-case">{departmentCase}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="evt-cell evt-col-time">
+                      <div className="evt-time-val">{timeStr}</div>
+                      <div className="evt-date-val">{dateStr}</div>
+                    </div>
+                    <div className="evt-cell evt-col-user">
+                      <span className="evt-user-link" title={`User: ${ev.username || '—'}`}>
+                        {ev.username || '—'}
+                      </span>
+                    </div>
+                    <div className="evt-cell evt-col-ip" title={`IP: ${ev.source_ip || '—'}`}>
+                      <span className="evt-ip-text">{ev.source_ip || '—'}</span>
+                    </div>
+                    <div className="evt-cell evt-col-status">
+                      {ev.status === 'SUCCESS' ? (
+                        <span className="evt-status-icon success" title="Successful authentication">
+                          <Icon name="check-circle" size={15} />
+                        </span>
+                      ) : (
+                        <span className="evt-status-icon failure" title="Failed authentication">
+                          <Icon name="x-circle" size={15} />
+                        </span>
+                      )}
+                    </div>
+                    <div className="evt-cell evt-col-sev">
+                      <span className={`evt-severity-tag ${isHigh ? 'high' : 'low'}`}>
+                        {isHigh ? 'HIGH' : 'LOW'}
+                      </span>
+                    </div>
+                  </>
+                )}
               </motion.div>
             );
           })}
@@ -1334,11 +932,11 @@ function DetectedIncidentsTable({
           {alerts.map((al, idx) => {
             const rawType = alertTypeLabel(al.alert_type);
             const status = (al.status || (al.resolved ? 'RESOLVED' : 'OPEN')).toUpperCase();
-            const machine = al.source_host || al.target_computer || 'LAPTOP-A';
+            const machine = getAlertMachine(al) || '—';
             const ip = al.source_ip || '—';
-            const risk = (al.risk_level || 'HIGH').toUpperCase();
+            const risk = (al.risk_level || 'UNKNOWN').toUpperCase();
             const isHighOrCritical = risk === 'HIGH' || risk === 'CRITICAL';
-            const count = al.failure_count || al.event_count || 0;
+            const count = al.failure_count ?? al.event_count ?? 0;
 
             return (
               <motion.div
@@ -1356,7 +954,7 @@ function DetectedIncidentsTable({
                 {/* 1. Severity & Type */}
                 <div className="inc-cell inc-col-type">
                   <span className={`inc-severity-badge ${isHighOrCritical ? 'high' : 'normal'}`}>
-                    HIGH
+                    {risk}
                   </span>
                   <div className="inc-type-wrap">
                     <span className="inc-type-name">{rawType}</span>
@@ -1452,6 +1050,7 @@ function AlertList({
   const listVariants = motionPrefs.listItem || variants.listItem;
   const [actingAlertId, setActingAlertId] = useState(null);
   const [confirmShutdownId, setConfirmShutdownId] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
   if (!alerts.length) {
     return (
@@ -1468,12 +1067,19 @@ function AlertList({
       return;
     }
     setActingAlertId(al.id);
+    setActionError(null);
     try {
-      if (onExecuteAction) {
-        await onExecuteAction(al.id, action, {
-          terminalId: al.source_host || al.target_computer,
-        });
+      if (!onExecuteAction) {
+        throw new Error('Alert action handler is unavailable.');
       }
+      await onExecuteAction(al.id, action, {
+        terminalId: getAlertMachine(al) || undefined,
+      });
+    } catch (err) {
+      setActionError({
+        id: al.id,
+        message: err instanceof Error ? err.message : 'Alert action failed.',
+      });
     } finally {
       setActingAlertId(null);
       setConfirmShutdownId(null);
@@ -1500,13 +1106,23 @@ function AlertList({
             const fullTime = fmtDateTime(al.triggered_at);
             const timeParts = fullTime && fullTime.includes(',') ? fullTime.split(', ') : null;
             const status = (al.status || (al.resolved ? 'RESOLVED' : 'OPEN')).toUpperCase();
-            const machine = al.source_host || al.target_computer || 'LAPTOP-A';
+            const targetMachine = getAlertMachine(al);
+            const machine = targetMachine || '—';
             const ip = al.source_ip || '—';
-            const risk = (al.risk_level || 'HIGH').toUpperCase();
+            const risk = (al.risk_level || 'UNKNOWN').toUpperCase();
             const isHighOrCritical = risk === 'HIGH' || risk === 'CRITICAL';
+            const canExecuteRemoteAction = Boolean(targetMachine || (ip !== '—' && ip !== 'UNKNOWN'));
             const isActing = actingAlertId === al.id;
             const isConfirmingShutdown = confirmShutdownId === al.id;
-            const count = al.failure_count || al.event_count || 0;
+            const count = al.failure_count ?? al.event_count ?? 0;
+            const statusLabel = status.toLowerCase().replace(/_/g, ' ');
+            const statusClass = status === 'AUTHORIZED'
+              ? 'authorized'
+              : status === 'REMEDIATING'
+              ? 'remediating'
+              : status === 'RESOLVED'
+              ? 'resolved'
+              : 'open';
 
             return (
               <motion.div
@@ -1554,7 +1170,11 @@ function AlertList({
 
                 {/* 5. Authorization Status */}
                 <div className="col-cell col-status">
-                  {status === 'AUTHORIZED' ? (
+                  {status !== 'REMEDIATING' && status !== 'RESOLVED' && status !== 'AUTHORIZED' ? (
+                    <span className={`alert-status-pill ${statusClass}`}>
+                      {statusLabel}
+                    </span>
+                  ) : status === 'AUTHORIZED' ? (
                     <span className="alert-status-pill authorized">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -1570,11 +1190,7 @@ function AlertList({
                     <span className="alert-status-pill resolved">
                       Resolved
                     </span>
-                  ) : (
-                    <span className="alert-status-pill open">
-                      Open
-                    </span>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* 6. Actions (Compact Outlined Buttons) */}
@@ -1585,6 +1201,7 @@ function AlertList({
                       <button
                         type="button"
                         className="btn-confirm-yes"
+                        disabled={!canExecuteRemoteAction || isActing}
                         onClick={(e) => handleActionClick(e, al, 'shutdown')}
                       >
                         Confirm
@@ -1605,9 +1222,9 @@ function AlertList({
                       <button
                         type="button"
                         className="btn-action-outline shutdown"
-                        disabled={isActing}
+                        disabled={isActing || !canExecuteRemoteAction}
                         onClick={(e) => handleActionClick(e, al, 'shutdown')}
-                        title={`Remotely power off ${machine}`}
+                        title={canExecuteRemoteAction ? `Remotely power off ${machine === '—' ? ip : machine}` : 'No identifiable target is available'}
                       >
                         Shutdown
                       </button>
@@ -1615,9 +1232,9 @@ function AlertList({
                       <button
                         type="button"
                         className="btn-action-outline lock"
-                        disabled={isActing}
+                        disabled={isActing || !canExecuteRemoteAction}
                         onClick={(e) => handleActionClick(e, al, 'lock_screen')}
-                        title={`Lock workstation on ${machine}`}
+                        title={canExecuteRemoteAction ? `Lock workstation on ${machine === '—' ? ip : machine}` : 'No identifiable target is available'}
                       >
                         Lock
                       </button>
@@ -1632,6 +1249,11 @@ function AlertList({
                         Authorize
                       </button>
                     </div>
+                  )}
+                  {actionError?.id === al.id && (
+                    <span role="alert" style={{ color: '#dc2626', fontSize: '11px' }}>
+                      {actionError.message}
+                    </span>
                   )}
                 </div>
 
@@ -1674,6 +1296,7 @@ export default function Dashboard({ user, token, onLogout, onUpdateUser }) {
     updateAlertStatus,
   } = useAuthSentinel(selectedDate);
   const [activeMenu, setActiveMenu] = useState('overview');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedLab, setSelectedLab] = useState(null);
   const [selectedComputer, setSelectedComputer] = useState(null);
   const [selectedAlertForModal, setSelectedAlertForModal] = useState(null);
@@ -1697,9 +1320,28 @@ export default function Dashboard({ user, token, onLogout, onUpdateUser }) {
 
   const handleMenuChange = (menu) => {
     setActiveMenu(menu);
+    setIsSidebarOpen(false);
     setSelectedLab(null);
     setSelectedComputer(null);
   };
+
+  useEffect(() => {
+    if (!isSidebarOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setIsSidebarOpen(false);
+    };
+    const handleResize = () => {
+      if (window.innerWidth > 768) setIsSidebarOpen(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isSidebarOpen]);
 
   const currentMenu = menuConfig[activeMenu] || { label: 'Overview', category: 'MONITORING' };
 
@@ -1710,12 +1352,28 @@ export default function Dashboard({ user, token, onLogout, onUpdateUser }) {
   return (
     <MotionConfig reducedMotion="user">
       <div className="app-wrapper">
-        <Sidebar activeMenu={activeMenu} onMenuChange={handleMenuChange} user={user} onLogout={handleLogout} />
+        <Sidebar
+          activeMenu={activeMenu}
+          onMenuChange={handleMenuChange}
+          user={user}
+          onLogout={handleLogout}
+          isOpen={isSidebarOpen}
+        />
+        {isSidebarOpen && (
+          <button
+            type="button"
+            className="mobile-sidebar-backdrop"
+            aria-label="Close navigation menu"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
         
         <div className="main-content">
           <Header 
             currentMenuLabel={currentMenu.label}
             currentCategory={currentMenu.category}
+            onMenuToggle={() => setIsSidebarOpen((open) => !open)}
+            isSidebarOpen={isSidebarOpen}
           />
           
           <div className="body">

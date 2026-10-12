@@ -285,7 +285,7 @@ async def get_admin_system_info(
         admin_email=smtp_service.DEFAULT_ADMIN_EMAIL,
         smtp_host=smtp_service.SMTP_HOST,
         smtp_user=smtp_service.SMTP_USER,
-        smtp_enabled=True,
+        smtp_enabled=smtp_service.is_configured(),
         recipient_emails=recipients,
         total_users=total_users,
     )

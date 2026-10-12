@@ -9,14 +9,18 @@
 
 .login-page {
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px 0;
+  box-sizing: border-box;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: #ffffff;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .login-bg-gradient {
@@ -33,6 +37,7 @@
 .login-container {
   max-width: 420px;
   width: 90%;
+  margin: auto;
   background: white;
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);

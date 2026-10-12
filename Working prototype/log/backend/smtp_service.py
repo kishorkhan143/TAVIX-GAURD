@@ -20,12 +20,16 @@ logger = logging.getLogger("authsentinel.smtp")
 # ── SMTP Configuration ───────────────────────────────────────────────────────
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "kishorkhan.dev@gmail.com")
-_raw_pass = os.getenv("SMTP_PASSWORD", "rinv jjhh yxnh hyas")
+SMTP_USER = os.getenv("SMTP_USER", "").strip()
+_raw_pass = os.getenv("SMTP_PASSWORD", "")
 SMTP_PASSWORD = _raw_pass.replace(" ", "")
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "TAVIX GUARD SOC")
-DEFAULT_ADMIN_EMAIL = os.getenv("DEFAULT_ADMIN_EMAIL", "kishorkhan.dev@gmail.com")
+DEFAULT_ADMIN_EMAIL = os.getenv("DEFAULT_ADMIN_EMAIL", "kishorkhan.dev@gmail.com").strip()
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+
+def is_configured() -> bool:
+    return bool(SMTP_HOST.strip() and SMTP_USER and SMTP_PASSWORD)
 
 
 def get_smtp_connection(timeout: int = 15) -> smtplib.SMTP:
@@ -61,7 +65,7 @@ def get_active_recipient_emails(db_session=None) -> List[str]:
         except Exception as e:
             logger.warning("Could not query User table for alert recipients: %s", e)
 
-    return list(recipients)
+    return sorted(recipients)
 
 
 def send_incident_alert_sync(

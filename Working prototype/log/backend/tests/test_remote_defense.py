@@ -14,6 +14,7 @@ import sys
 import os
 import asyncio
 from datetime import datetime, timezone
+from fastapi import HTTPException
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -33,6 +34,7 @@ from main import (
     execute_alert_action,
     get_collector_commands,
     ack_collector_command,
+    _local_date_utc_range,
     detection,
 )
 
@@ -109,7 +111,7 @@ async def run_admin_lock_screen_test():
         # Verify alert status updated to REMEDIATING
         alert = db.get(Alert, alert_id)
         assert alert.status == "REMEDIATING"
-        assert alert.resolved is True
+        assert alert.resolved is False
 
         # 2. Collector polls for pending commands for LAPTOP-A
         commands = await get_collector_commands(
@@ -141,6 +143,9 @@ async def run_admin_lock_screen_test():
         cmd_record = db.get(RemoteCommand, cmd_id)
         assert cmd_record.status == "EXECUTED"
         assert "locked" in cmd_record.result_message.lower()
+        db.refresh(alert)
+        assert alert.status == "RESOLVED"
+        assert alert.resolved is True
         print(f"[PASS] Lock Screen action flow passed: Command #{cmd_id} queued, polled, and ACKed as EXECUTED.")
     finally:
         db.close()
@@ -199,6 +204,7 @@ async def run_admin_shutdown_test():
         # Verify alert is REMEDIATING
         alert = db.get(Alert, alert_id)
         assert alert.status == "REMEDIATING"
+        assert alert.resolved is False
 
         # Collector polls
         commands = await get_collector_commands(
@@ -228,9 +234,53 @@ async def run_admin_shutdown_test():
 
         cmd_record = db.get(RemoteCommand, cmd_id)
         assert cmd_record.status == "EXECUTED"
+        db.refresh(alert)
+        assert alert.status == "RESOLVED"
+        assert alert.resolved is True
         print(f"[PASS] Shutdown action flow passed: Command #{cmd_id} queued, polled, and ACKed as EXECUTED.")
     finally:
         db.close()
+
+
+async def run_missing_action_target_test():
+    """Ensure remote actions fail rather than dispatching to an assumed machine."""
+    db = SessionLocal()
+    alert = Alert(
+        alert_type="REPEATED_FAILURE",
+        source_ip=None,
+        source_host=None,
+        target_computer=None,
+        status="OPEN",
+        resolved=False,
+    )
+    db.add(alert)
+    db.commit()
+    try:
+        try:
+            await execute_alert_action(
+                alert_id=alert.id,
+                body=AlertActionRequest(action="shutdown"),
+                db=db,
+            )
+            raise AssertionError("An action without a target must be rejected")
+        except HTTPException as error:
+            assert error.status_code == 400
+        assert db.query(RemoteCommand).filter(RemoteCommand.alert_id == alert.id).count() == 0
+    finally:
+        db.delete(alert)
+        db.commit()
+        db.close()
+
+
+def test_local_date_uses_utc_boundaries_for_india():
+    start_utc, end_utc = _local_date_utc_range("2026-10-12")
+    assert start_utc == datetime(2026, 10, 11, 18, 30)
+    assert end_utc == datetime(2026, 10, 12, 18, 30)
+    try:
+        _local_date_utc_range("2026-02-30")
+        raise AssertionError("Invalid calendar dates must be rejected")
+    except HTTPException as error:
+        assert error.status_code == 400
 
 
 def test_collector_ip_resolution_logic():
@@ -276,6 +326,8 @@ if __name__ == "__main__":
     asyncio.run(run_admin_lock_screen_test())
     asyncio.run(run_admin_authorize_test())
     asyncio.run(run_admin_shutdown_test())
+    asyncio.run(run_missing_action_target_test())
+    test_local_date_uses_utc_boundaries_for_india()
     test_collector_ip_resolution_logic()
     print("\n========================================================")
     print("ALL REMOTE DEFENSE & TELEMETRY TESTS PASSED SUCCESSFULLY!")

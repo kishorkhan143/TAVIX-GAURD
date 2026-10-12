@@ -3,6 +3,13 @@ import { BACKEND_URL } from '../../useAuthSentinel';
 import CustomSelect from '../CustomSelect';
 import './ComputerDetailView.css';
 
+const formatAuthResult = (status) => {
+  const normalizedStatus = String(status || '').toUpperCase();
+  if (normalizedStatus === 'SUCCESS') return 'SUCCESS';
+  if (normalizedStatus === 'FAILURE' || normalizedStatus === 'FAILED') return 'FAILED';
+  return status || 'UNKNOWN';
+};
+
 export default function ComputerDetailView({
   terminalId,
   lab,
@@ -538,12 +545,12 @@ export default function ComputerDetailView({
                           borderRadius: '999px',
                           fontSize: '11px',
                           fontWeight: 700,
-                          background: comp.last_auth_event.status === 'SUCCESS' ? '#ecfdf5' : '#fee2e2',
-                          color: comp.last_auth_event.status === 'SUCCESS' ? '#059669' : '#dc2626',
-                          border: comp.last_auth_event.status === 'SUCCESS' ? '1px solid #a7f3d0' : '1px solid #fecaca',
+                          background: String(comp.last_auth_event.status).toUpperCase() === 'SUCCESS' ? '#ecfdf5' : '#fee2e2',
+                          color: String(comp.last_auth_event.status).toUpperCase() === 'SUCCESS' ? '#059669' : '#dc2626',
+                          border: String(comp.last_auth_event.status).toUpperCase() === 'SUCCESS' ? '1px solid #a7f3d0' : '1px solid #fecaca',
                         }}
                       >
-                        {comp.last_auth_event.status || 'UNKNOWN'}
+                        {formatAuthResult(comp.last_auth_event.status)}
                       </span>
                     ) : (
                       renderValue(null)
@@ -556,15 +563,6 @@ export default function ComputerDetailView({
                     Auth Account
                   </div>
                   <div>{renderValue(comp.last_auth_event?.username)}</div>
-                </div>
-
-                <div>
-                  <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '2px' }}>
-                    Logon Type
-                  </div>
-                  <div style={{ fontSize: '11px' }}>
-                    {renderValue(comp.last_auth_event?.logon_type_description)}
-                  </div>
                 </div>
 
                 <div>
@@ -901,8 +899,7 @@ export default function ComputerDetailView({
                     <th style={{ padding: '8px 10px' }}>Timestamp</th>
                     <th style={{ padding: '8px 10px' }}>Event ID</th>
                     <th style={{ padding: '8px 10px' }}>Account</th>
-                    <th style={{ padding: '8px 10px' }}>Logon type</th>
-                    <th style={{ padding: '8px 10px' }}>Result</th>
+                    <th style={{ padding: '8px 10px' }}>Login Result</th>
                     <th style={{ padding: '8px 10px' }}>Source</th>
                     <th style={{ padding: '8px 10px' }}>Risk</th>
                   </tr>
@@ -910,7 +907,7 @@ export default function ComputerDetailView({
                 <tbody>
                   {filteredEvents.length === 0 ? (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-tertiary)' }}>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-tertiary)' }}>
                         {uniqueEvents.length === 0
                           ? 'No authentication events recorded for this computer.'
                           : 'No events match the current filter.'}
@@ -928,9 +925,6 @@ export default function ComputerDetailView({
                             {ev.event_id || '—'}
                           </td>
                           <td style={{ padding: '8px 10px', fontWeight: 600 }}>{ev.username || '—'}</td>
-                          <td style={{ padding: '8px 10px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                            {ev.logon_type_description || `Type ${ev.logon_type || '—'}`}
-                          </td>
                           <td style={{ padding: '8px 10px' }}>
                             <span
                               style={{
@@ -940,12 +934,12 @@ export default function ComputerDetailView({
                                 borderRadius: '999px',
                                 fontWeight: 700,
                                 fontSize: '11px',
-                                background: ev.status === 'SUCCESS' ? '#ecfdf5' : '#fee2e2',
-                                color: ev.status === 'SUCCESS' ? '#059669' : '#dc2626',
-                                border: ev.status === 'SUCCESS' ? '1px solid #a7f3d0' : '1px solid #fecaca',
+                                background: String(ev.status).toUpperCase() === 'SUCCESS' ? '#ecfdf5' : '#fee2e2',
+                                color: String(ev.status).toUpperCase() === 'SUCCESS' ? '#059669' : '#dc2626',
+                                border: String(ev.status).toUpperCase() === 'SUCCESS' ? '1px solid #a7f3d0' : '1px solid #fecaca',
                               }}
                             >
-                              {ev.status || 'UNKNOWN'}
+                              {formatAuthResult(ev.status)}
                             </span>
                           </td>
                           <td style={{ padding: '8px 10px', fontSize: '11px', color: 'var(--text-secondary)' }}>
